@@ -127,6 +127,7 @@
 
             this._routeProcessing();
             this._applyHighpass(settings.highpass);
+            this._applyEq(settings.eq);
             this._applyCompressor(settings.compressor);
             this._applyMakeup(settings.makeupGain);
             this._applyLimiter(settings.limiter);
@@ -167,6 +168,7 @@
             return {
                 input: null,
                 highpass: null,
+                eq: null,
                 analyser: null,
                 autoGain: null,
                 compressor: null,
@@ -184,6 +186,16 @@
             this.nodes.highpass = ctx.createBiquadFilter();
             this.nodes.highpass.type = 'highpass';
             this.nodes.highpass.Q.value = 0.707;
+
+            const EQ_FREQS = (root.YTMS && root.YTMS.Presets && root.YTMS.Presets.EQ_BANDS) || [60, 250, 1000, 4000, 12000];
+            this.nodes.eq = EQ_FREQS.map((freq) => {
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'peaking';
+                filter.frequency.value = freq;
+                filter.Q.value = 1.0;
+                filter.gain.value = 0;
+                return filter;
+            });
 
             this.nodes.analyser = ctx.createAnalyser();
             this.nodes.analyser.fftSize = ANALYSER_FFT;
@@ -207,7 +219,12 @@
             this._disconnectChain();
             const n = this.nodes;
             n.input.connect(n.highpass);
-            n.highpass.connect(n.analyser);
+            let prev = n.highpass;
+            for (const band of n.eq) {
+                prev.connect(band);
+                prev = band;
+            }
+            prev.connect(n.analyser);
             n.analyser.connect(n.autoGain);
             n.autoGain.connect(n.compressor);
             n.compressor.connect(n.makeup);
@@ -225,6 +242,12 @@
         _disconnectChain() {
             for (const node of Object.values(this.nodes)) {
                 if (!node) continue;
+                if (Array.isArray(node)) {
+                    for (const sub of node) {
+                        try { sub.disconnect(); } catch (_) { }
+                    }
+                    continue;
+                }
                 try { node.disconnect(); } catch (_) { }
             }
         }
@@ -234,6 +257,19 @@
             const now = this.context.currentTime;
             const freq = hp && hp.enabled ? hp.frequency : 20;
             node.frequency.setTargetAtTime(freq, now, 0.01);
+        }
+
+        _applyEq(eq) {
+            if (!this.nodes.eq) return;
+            const now = this.context.currentTime;
+            const presets = root.YTMS && root.YTMS.Presets && root.YTMS.Presets.EQ_PRESETS;
+            const id = (eq && eq.id) ? eq.id : 'flat';
+            const preset = (presets && presets[id]) || (presets && presets.flat);
+            const gains = preset ? preset.gains : [0, 0, 0, 0, 0];
+            for (let i = 0; i < this.nodes.eq.length; i++) {
+                const g = (i < gains.length) ? gains[i] : 0;
+                this.nodes.eq[i].gain.setTargetAtTime(g, now, 0.05);
+            }
         }
 
         _applyCompressor(c) {
@@ -296,13 +332,24 @@
             const sample = this._sampleAudio();
             if (sample === null) return;
 
-            const alpha = AUTO_GAIN_TICK_MS / 2000;
-            if (this._emaMeanSquare === 0) {
+            const instDb = 10 * Math.log10(Math.max(sample.meanSquare, 1e-12));
+
+            if (instDb < SILENCE_GATE_DB) {
+                this._silenceTicks = (this._silenceTicks || 0) + 1;
+                return;
+            }
+
+            const longSilence = (this._silenceTicks || 0) > (600 / AUTO_GAIN_TICK_MS);
+            if (longSilence || this._emaMeanSquare === 0) {
                 this._emaMeanSquare = sample.meanSquare;
+                this._peakEnvelope = sample.peak * sample.peak;
+                this._trackChangeBoost = true;
             } else {
+                const alpha = AUTO_GAIN_TICK_MS / 2000;
                 this._emaMeanSquare =
                     this._emaMeanSquare * (1 - alpha) + sample.meanSquare * alpha;
             }
+            this._silenceTicks = 0;
 
             const peakSquared = sample.peak * sample.peak;
             if (peakSquared > this._peakEnvelope) {
@@ -316,8 +363,6 @@
             const peakDb = 10 * Math.log10(Math.max(this._peakEnvelope, 1e-12));
             this._currentCrestDb = Math.max(0, peakDb - rmsDb);
 
-            if (rmsDb < SILENCE_GATE_DB) return;
-
             this._applyAutoGainUpdate(rmsDb);
             this._applyAdaptiveUpdate(rmsDb);
         }
@@ -326,6 +371,7 @@
             const ag = this.settings.autoGain;
             if (!ag || !ag.enabled) {
                 this._currentAutoGainDb = 0;
+                this._trackChangeBoost = false;
                 return;
             }
 
@@ -333,11 +379,19 @@
             if (gainDb > ag.maxBoostDb) gainDb = ag.maxBoostDb;
             if (gainDb < -ag.maxCutDb) gainDb = -ag.maxCutDb;
 
+            const gainError = Math.abs(gainDb - this._currentAutoGainDb);
             this._currentAutoGainDb = gainDb;
 
             const gain = Math.pow(10, gainDb / 20);
             const now = this.context.currentTime;
-            const tau = Math.max(0.05, (ag.responseMs || 500) / 1000 / 3);
+            const baseTau = Math.max(0.05, (ag.responseMs || 500) / 1000 / 3);
+            let tau = baseTau;
+            if (this._trackChangeBoost) {
+                tau = 0.08;
+                this._trackChangeBoost = false;
+            } else if (gainError > 3) {
+                tau = Math.min(baseTau, 0.15);
+            }
             this.nodes.autoGain.gain.setTargetAtTime(gain, now, tau);
         }
 

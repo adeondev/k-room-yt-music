@@ -10,6 +10,7 @@
         langSelect: document.getElementById('lang-select'),
         presets: document.getElementById('presets'),
         presetDescription: document.getElementById('preset-description'),
+        eqPresets: document.getElementById('eq-presets'),
         ratio: document.getElementById('ratio'),
         ratioOutput: document.getElementById('ratio-output'),
         makeup: document.getElementById('makeup'),
@@ -131,6 +132,22 @@
         });
     }
 
+    function renderEqPresets() {
+        if (!elements.eqPresets || !Presets.EQ_PRESETS) return;
+        elements.eqPresets.innerHTML = '';
+        Object.values(Presets.EQ_PRESETS).forEach((eq) => {
+            const btn = document.createElement('button');
+            btn.className = 'eq-preset';
+            btn.type = 'button';
+            const lblKey = 'eq_' + eq.id + '_label';
+            btn.textContent = i18nData[lblKey] || eq.label;
+            btn.dataset.eq = eq.id;
+            btn.setAttribute('aria-pressed', 'false');
+            btn.addEventListener('click', () => applyEqPreset(eq.id));
+            elements.eqPresets.appendChild(btn);
+        });
+    }
+
     function findMatchingPreset(settings) {
         for (const preset of Object.values(Presets.ALL)) {
             if (deepEqualSettings(preset, settings)) return preset.id;
@@ -160,7 +177,8 @@
             a.adaptive.enabled === b.adaptive.enabled &&
             a.adaptive.headroomDb === b.adaptive.headroomDb &&
             a.adaptive.minRatio === b.adaptive.minRatio &&
-            a.adaptive.maxRatio === b.adaptive.maxRatio
+            a.adaptive.maxRatio === b.adaptive.maxRatio &&
+            ((a.eq && a.eq.id) || 'flat') === ((b.eq && b.eq.id) || 'flat')
         );
     }
 
@@ -236,6 +254,14 @@
             );
         });
 
+        const activeEq = (state.eq && state.eq.id) || (Presets.DEFAULT_EQ_ID || 'flat');
+        document.querySelectorAll('.eq-preset').forEach((btn) => {
+            btn.setAttribute(
+                'aria-pressed',
+                btn.dataset.eq === activeEq ? 'true' : 'false'
+            );
+        });
+
         if (matched && Presets.ALL[matched]) {
             const descKey = 'preset_' + matched + '_desc';
             elements.presetDescription.textContent = i18nData[descKey] || Presets.ALL[matched].description;
@@ -279,6 +305,7 @@
         await loadTranslations();
         configureRanges();
         renderPresets(Presets.DEFAULT_PRESET_ID);
+        renderEqPresets();
         elements.versionLabel.textContent =
             'v' + (chrome.runtime.getManifest().version || '—');
 
@@ -439,6 +466,13 @@
         } else {
             await chrome.storage.local.set({ [Presets.STORAGE_KEY]: state });
         }
+    }
+
+    async function applyEqPreset(eqId) {
+        if (!state) return;
+        state.eq = { id: eqId };
+        renderFromState();
+        enqueuePersist();
     }
 
     function startMetersPolling() {

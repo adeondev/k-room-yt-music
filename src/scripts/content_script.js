@@ -150,6 +150,81 @@
                 background: rgba(255, 255, 255, 0.25);
                 box-shadow: none;
             }
+            #ytms-kroom-update-popup {
+                position: fixed;
+                bottom: 24px;
+                right: 24px;
+                width: 320px;
+                background: rgba(15, 15, 15, 0.95);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 16px;
+                padding: 20px;
+                box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02);
+                z-index: 2147483647;
+                font-family: Roboto, Arial, sans-serif;
+                color: #fff;
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+                transform: translateY(60px) scale(0.95);
+                opacity: 0;
+                pointer-events: none;
+                transition: all 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            }
+            #ytms-kroom-update-popup.is-visible {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+                pointer-events: auto;
+            }
+            #ytms-kroom-update-popup .ytms-kroom-update-header {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            #ytms-kroom-update-popup .ytms-kroom-update-icon {
+                width: 28px;
+                height: 28px;
+                border-radius: 6px;
+            }
+            #ytms-kroom-update-popup .ytms-kroom-update-title {
+                font-size: 16px;
+                font-weight: 600;
+                color: #ff0033;
+                letter-spacing: 0.5px;
+            }
+            #ytms-kroom-update-popup .ytms-kroom-update-desc {
+                font-size: 14px;
+                color: #ccc;
+                line-height: 1.5;
+            }
+            #ytms-kroom-update-popup .ytms-kroom-update-desc b {
+                color: #fff;
+                font-weight: 600;
+            }
+            #ytms-kroom-update-popup .ytms-kroom-update-actions {
+                display: flex;
+                justify-content: flex-end;
+                margin-top: 4px;
+            }
+            #ytms-kroom-update-popup .ytms-kroom-update-btn {
+                background: rgba(255, 0, 51, 0.15);
+                border: 1px solid rgba(255, 0, 51, 0.3);
+                color: #ff0033;
+                padding: 8px 18px;
+                border-radius: 20px;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                transition: all 200ms ease;
+            }
+            #ytms-kroom-update-popup .ytms-kroom-update-btn:hover {
+                background: rgba(255, 0, 51, 0.25);
+                border-color: rgba(255, 0, 51, 0.5);
+                transform: scale(1.05);
+            }
         `;
         document.documentElement.appendChild(style);
     }
@@ -378,6 +453,84 @@
         engine.ensureRunning();
     }
 
+    function showUpdatePopup(current, remote) {
+        if (document.getElementById('ytms-kroom-update-popup')) return;
+        injectStyles();
+
+        const isPt = navigator.language.startsWith('pt');
+        const tTitle = isPt ? 'Atualização K-ROOM' : 'K-ROOM Update Available';
+        const tDesc = isPt 
+            ? `Sua extensão está desatualizada.<br>Atual: <b>${current}</b> &rarr; Nova: <b>${remote}</b>`
+            : `Your extension is outdated.<br>Current: <b>${current}</b> &rarr; New: <b>${remote}</b>`;
+        const tBtn = isPt ? 'Fechar' : 'Dismiss';
+
+        const popup = document.createElement('div');
+        popup.id = 'ytms-kroom-update-popup';
+
+        const header = document.createElement('div');
+        header.className = 'ytms-kroom-update-header';
+
+        const icon = document.createElement('img');
+        icon.src = chrome.runtime.getURL('icons/icon.png');
+        icon.className = 'ytms-kroom-update-icon';
+        icon.alt = 'K-ROOM';
+
+        const title = document.createElement('div');
+        title.className = 'ytms-kroom-update-title';
+        title.textContent = tTitle;
+
+        header.appendChild(icon);
+        header.appendChild(title);
+
+        const desc = document.createElement('div');
+        desc.className = 'ytms-kroom-update-desc';
+        desc.innerHTML = tDesc;
+
+        const actions = document.createElement('div');
+        actions.className = 'ytms-kroom-update-actions';
+
+        const btn = document.createElement('button');
+        btn.className = 'ytms-kroom-update-btn';
+        btn.textContent = tBtn;
+        btn.addEventListener('click', () => {
+            popup.classList.remove('is-visible');
+            setTimeout(() => popup.remove(), 400);
+        });
+
+        actions.appendChild(btn);
+        popup.appendChild(header);
+        popup.appendChild(desc);
+        popup.appendChild(actions);
+
+        document.documentElement.appendChild(popup);
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                popup.classList.add('is-visible');
+            });
+        });
+    }
+
+    async function checkVersion() {
+        try {
+            const currentVersion = chrome.runtime.getManifest().version;
+            const res = await new Promise((resolve) => {
+                chrome.runtime.sendMessage({ type: 'YTMS_CHECK_VERSION' }, (response) => {
+                    resolve(response);
+                });
+            });
+
+            if (res && res.version) {
+                const remoteVersion = res.version;
+                if (remoteVersion !== currentVersion) {
+                    showUpdatePopup(currentVersion, remoteVersion);
+                }
+            }
+        } catch (err) {
+            log('Falha ao verificar versão', err);
+        }
+    }
+
     async function boot() {
         currentSettings = await loadSettings();
         setupMessaging();
@@ -389,6 +542,7 @@
         injectNavButton();
         injectVisualizer();
         setupOutsideClose();
+        checkVersion();
 
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) healthCheck();

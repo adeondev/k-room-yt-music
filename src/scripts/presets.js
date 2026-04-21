@@ -31,7 +31,8 @@
                 attack: 0.001,
                 release: 0.05
             },
-            adaptive: { enabled: false, headroomDb: 6, minRatio: 2, maxRatio: 6 }
+            adaptive: { enabled: false, headroomDb: 6, minRatio: 2, maxRatio: 6 },
+            eq: { id: 'flat' }
         },
         smart: {
             id: 'smart',
@@ -41,17 +42,17 @@
             highpass: { enabled: true, frequency: 30 },
             autoGain: {
                 enabled: true,
-                targetDb: -20,
-                maxBoostDb: 8,
-                maxCutDb: 8,
-                responseMs: 1800
+                targetDb: -19,
+                maxBoostDb: 14,
+                maxCutDb: 12,
+                responseMs: 900
             },
             compressor: {
                 threshold: -20,
                 knee: 8,
-                ratio: 3,
-                attack: 0.008,
-                release: 0.25
+                ratio: 3.5,
+                attack: 0.006,
+                release: 0.2
             },
             makeupGain: 1.0,
             limiter: {
@@ -62,7 +63,8 @@
                 attack: 0.001,
                 release: 0.05
             },
-            adaptive: { enabled: true, headroomDb: 6, minRatio: 2.5, maxRatio: 5 }
+            adaptive: { enabled: true, headroomDb: 6, minRatio: 2.5, maxRatio: 5 },
+            eq: { id: 'flat' }
         },
         gentle: {
             id: 'gentle',
@@ -93,7 +95,8 @@
                 attack: 0.001,
                 release: 0.05
             },
-            adaptive: { enabled: false, headroomDb: 6, minRatio: 2, maxRatio: 6 }
+            adaptive: { enabled: false, headroomDb: 6, minRatio: 2, maxRatio: 6 },
+            eq: { id: 'flat' }
         },
         strong: {
             id: 'strong',
@@ -124,7 +127,8 @@
                 attack: 0.001,
                 release: 0.05
             },
-            adaptive: { enabled: false, headroomDb: 6, minRatio: 2, maxRatio: 6 }
+            adaptive: { enabled: false, headroomDb: 6, minRatio: 2, maxRatio: 6 },
+            eq: { id: 'flat' }
         },
         night: {
             id: 'night',
@@ -155,7 +159,8 @@
                 attack: 0.001,
                 release: 0.05
             },
-            adaptive: { enabled: false, headroomDb: 6, minRatio: 2, maxRatio: 6 }
+            adaptive: { enabled: false, headroomDb: 6, minRatio: 2, maxRatio: 6 },
+            eq: { id: 'flat' }
         },
         off: {
             id: 'off',
@@ -186,7 +191,8 @@
                 attack: 0.001,
                 release: 0.05
             },
-            adaptive: { enabled: false, headroomDb: 6, minRatio: 2, maxRatio: 6 }
+            adaptive: { enabled: false, headroomDb: 6, minRatio: 2, maxRatio: 6 },
+            eq: { id: 'flat' }
         }
     });
 
@@ -205,8 +211,32 @@
         autoGainResponse: { min: 100, max: 3000, step: 50 }
     });
 
-    const STORAGE_KEY = 'ytms.settings.v3';
+    const STORAGE_KEY = 'ytms.settings.v4';
     const DEFAULT_PRESET_ID = 'default';
+
+    const EQ_BANDS = Object.freeze([60, 250, 1000, 4000, 12000]);
+
+    const EQ_PRESETS = Object.freeze({
+        flat:       { id: 'flat',       label: 'Flat',            gains: [0, 0, 0, 0, 0] },
+        bass:       { id: 'bass',       label: 'Grave',           gains: [6, 3, 0, 0, 0] },
+        bassReduce: { id: 'bassReduce', label: 'Menos grave',     gains: [-5, -3, 0, 0, 0] },
+        treble:     { id: 'treble',     label: 'Agudo',           gains: [0, 0, 0, 3, 6] },
+        trebleReduce: { id: 'trebleReduce', label: 'Menos agudo', gains: [0, 0, 0, -3, -5] },
+        vocal:      { id: 'vocal',      label: 'Vocal',           gains: [-2, -1, 3, 2, 0] },
+        loudness:   { id: 'loudness',   label: 'Presença',        gains: [4, 1, -1, 2, 4] },
+        pop:        { id: 'pop',        label: 'Pop',             gains: [1, 2, 3, 2, 1] },
+        rock:       { id: 'rock',       label: 'Rock',            gains: [4, 2, -1, 2, 4] },
+        electronic: { id: 'electronic', label: 'Eletrônica',      gains: [5, 2, 0, 2, 4] },
+        hiphop:     { id: 'hiphop',     label: 'Hip-Hop',         gains: [5, 3, 0, 1, 3] },
+        jazz:       { id: 'jazz',       label: 'Jazz',            gains: [3, 2, 1, 2, 3] },
+        classical:  { id: 'classical',  label: 'Clássica',        gains: [3, 2, 0, 2, 3] },
+        acoustic:   { id: 'acoustic',   label: 'Acústica',        gains: [3, 1, 1, 2, 3] },
+        deep:       { id: 'deep',       label: 'Profundo',        gains: [4, 2, 1, -2, -3] },
+        smallSpk:   { id: 'smallSpk',   label: 'Alto-falantes pequenos', gains: [3, 2, 0, 1, 2] },
+        spoken:     { id: 'spoken',     label: 'Fala',            gains: [-3, -1, 3, 3, 0] }
+    });
+
+    const DEFAULT_EQ_ID = 'flat';
 
     function clonePreset(id) {
         const preset = PRESETS[id] || PRESETS[DEFAULT_PRESET_ID];
@@ -249,6 +279,10 @@
         s.adaptive.minRatio = clamp(s.adaptive.minRatio, LIMITS.ratio);
         s.adaptive.maxRatio = clamp(s.adaptive.maxRatio, LIMITS.ratio);
 
+        if (!s.eq || !EQ_PRESETS[s.eq.id]) {
+            s.eq = { id: DEFAULT_EQ_ID };
+        }
+
         return s;
     }
 
@@ -258,6 +292,9 @@
         LIMITS: LIMITS,
         STORAGE_KEY: STORAGE_KEY,
         DEFAULT_PRESET_ID: DEFAULT_PRESET_ID,
+        EQ_PRESETS: EQ_PRESETS,
+        EQ_BANDS: EQ_BANDS,
+        DEFAULT_EQ_ID: DEFAULT_EQ_ID,
         clone: clonePreset,
         clamp: clampSettings
     };

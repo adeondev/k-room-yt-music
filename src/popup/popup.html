@@ -12,8 +12,7 @@
     <main class="app">
         <header class="header">
             <div class="header__title">
-                <h1 data-i18n="appTitle">K-ROOM</h1>
-                <span class="header__subtitle" data-i18n="appSubtitle">YouTube Music</span>
+                <div class="header__logo" role="img" aria-label="K-ROOM"></div>
             </div>
             <div class="header__actions">
                 <select id="lang-select" class="lang-select" aria-label="Language">
@@ -31,6 +30,11 @@
             <h2 class="section__title" data-i18n="sectionPreset">Preset</h2>
             <div class="presets" id="presets"></div>
             <p class="section__hint" id="preset-description"></p>
+        </section>
+
+        <section class="section">
+            <h2 class="section__title" data-i18n="sectionSound">Som</h2>
+            <div class="eq-presets" id="eq-presets"></div>
         </section>
 
         <section class="section">
