@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-ROOM | YT Music Control</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <nav class="ytm-navbar">
+        <div class="nav-left">
+            <img src="icons/icon.svg" alt="K-ROOM" class="nav-logo">
+            <span class="nav-brand" data-i18n="navBrand">Music Control</span>
+        </div>
+        <div class="nav-center">
+            <div class="search-bar">
+                <svg viewBox="0 0 24 24" class="search-icon">
+                    <path fill="currentColor"
+                        d="M20.87,20.17l-5.59-5.59C16.35,13.35,17,11.75,17,10c0-3.87-3.13-7-7-7s-7,3.13-7,7s3.13,7,7,7c1.75,0,3.35-0.65,4.58-1.71 l5.59,5.59L20.87,20.17z M10,16c-3.31,0-6-2.69-6-6s2.69-6,6-6s6,2.69,6,6S13.31,16,10,16z">
+                    </path>
+                </svg>
+                <span class="search-placeholder" data-i18n="searchPlaceholder">Search features, presets...</span>
+            </div>
+        </div>
+        <div class="nav-right">
+            <button class="lang-toggle" id="langToggle">PT</button>
+            <a href="https://github.com/adeondev/k-room-yt-music" class="nav-link">GitHub</a>
+            <a href="https://github.com/adeondev/k-room-yt-music/releases/" target="_blank" class="btn-install">
+                <svg viewBox="0 0 24 24" class="icon-small">
+                    <path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"></path>
+                </svg>
+                <span data-i18n="install">Install</span>
+            </a>
+        </div>
+    </nav>
+
+    <main class="ytm-container">
+        <header class="artist-header">
+            <div class="header-bg"></div>
+            <div class="header-content">
+                <img src="icons/icon.svg" alt="K-ROOM Cover" class="artist-avatar">
+                <div class="artist-info">
+                    <span class="badge" data-i18n="badge">BROWSER EXTENSION</span>
+                    <h1 class="artist-name">K-ROOM</h1>
+                    <p class="artist-stats" data-i18n="artistStats">Real-time audio compressor & limiter for YouTube Music. Zero distortion.</p>
+                    <div class="header-actions">
+                        <button class="btn-play" onclick="window.open('https://github.com/adeondev/k-room-yt-music/releases/', '_blank')">
+                            <svg viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"></path>
+                            </svg>
+                            <span data-i18n="getStarted">Get Started</span>
+                        </button>
+                        <button class="btn-secondary" data-i18n="viewSource" onclick="window.open('https://github.com/adeondev/k-room-yt-music', '_blank')">View Source</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <section class="tracklist-section">
+            <h2 class="section-heading" data-i18n="topFeatures">Top Features</h2>
+            <div class="tracklist">
+                <div class="track-row">
+                    <div class="track-num">1</div>
+                    <div class="track-play"><svg viewBox="0 0 24 24">
+                            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"></path>
+                        </svg></div>
+                    <div class="track-details">
+                        <div class="track-title" data-i18n="feat1Title">Compressor & Limiter</div>
+                        <div class="track-artist" data-i18n="feat1Desc">Controls track dynamics to prevent clipping and balance volume.</div>
+                    </div>
+                    <div class="track-album" data-i18n="feat1Tag">Core Engine</div>
+                    <div class="track-time" data-i18n="enabled">Enabled</div>
+                </div>
+
+                <div class="track-row">
+                    <div class="track-num">2</div>
+                    <div class="track-play"><svg viewBox="0 0 24 24">
+                            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"></path>
+                        </svg></div>
+                    <div class="track-details">
+                        <div class="track-title" data-i18n="feat2Title">Auto-Gain Equalizer</div>
+                        <div class="track-artist" data-i18n="feat2Desc">Equalizes perceived loudness across different tracks automatically.
+                        </div>
+                    </div>
+                    <div class="track-album" data-i18n="feat2Tag">Volume Stability</div>
+                    <div class="track-time" data-i18n="enabled">Enabled</div>
+                </div>
+
+                <div class="track-row">
+                    <div class="track-num">3</div>
+                    <div class="track-play"><svg viewBox="0 0 24 24">
+                            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"></path>
+                        </svg></div>
+                    <div class="track-details">
+                        <div class="track-title" data-i18n="feat3Title">Smart Mode Detection</div>
+                        <div class="track-artist" data-i18n="feat3Desc">Detects if a song is too compressed or too dynamic on the fly.</div>
+                    </div>
+                    <div class="track-album" data-i18n="feat3Tag">Adaptive Audio</div>
+                    <div class="track-time" data-i18n="enabled">Enabled</div>
+                </div>
+
+                <div class="track-row">
+                    <div class="track-num">4</div>
+                    <div class="track-play"><svg viewBox="0 0 24 24">
+                            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"></path>
+                        </svg></div>
+                    <div class="track-details">
+                        <div class="track-title" data-i18n="feat4Title">Highpass Filter</div>
+                        <div class="track-artist" data-i18n="feat4Desc">Removes unwanted sub-bass rumble (< 30 Hz).</div>
+                    </div>
+                    <div class="track-album" data-i18n="feat4Tag">Frequency Control</div>
+                    <div class="track-time" data-i18n="enabled">Enabled</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="carousel-section">
+            <h2 class="section-heading" data-i18n="presets">Recommended Presets</h2>
+            <div class="album-grid">
+                <div class="album-card">
+                    <div class="album-cover cover-smart">
+                        <svg viewBox="0 0 24 24" class="cover-icon">
+                            <path fill="currentColor"
+                                d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L6.5,12L7.91,10.59L11,13.67L16.59,8.09L18,9.5L11,16.5">
+                            </path>
+                        </svg>
+                    </div>
+                    <h3 class="album-title" data-i18n="preSmart">Smart Mode</h3>
+                    <p class="album-desc" data-i18n="preSmartDesc">Real-time dynamic adjustment</p>
+                </div>
+                <div class="album-card">
+                    <div class="album-cover cover-night">
+                        <svg viewBox="0 0 24 24" class="cover-icon">
+                            <path fill="currentColor"
+                                d="M12,2A7,7 0 0,0 5,9C5,14.25 12,22 12,22C12,22 19,14.25 19,9A7,7 0 0,0 12,2M12,4A5,5 0 0,1 17,9C17,13.2 13.53,18.41 12,20.1C10.47,18.41 7,13.2 7,9A5,5 0 0,1 12,4M12,6.5A2.5,2.5 0 0,0 9.5,9A2.5,2.5 0 0,0 12,11.5A2.5,2.5 0 0,0 14.5,9A2.5,2.5 0 0,0 12,6.5Z">
+                            </path>
+                        </svg>
+                    </div>
+                    <h3 class="album-title" data-i18n="preNight">Night Mode</h3>
+                    <p class="album-desc" data-i18n="preNightDesc">Boosts quiet parts, contains peaks</p>
+                </div>
+                <div class="album-card">
+                    <div class="album-cover cover-gentle">
+                        <svg viewBox="0 0 24 24" class="cover-icon">
+                            <path fill="currentColor"
+                                d="M16,9V7H12V12.5C11.58,12.19 11.07,12 10.5,12A2.5,2.5 0 0,0 8,14.5A2.5,2.5 0 0,0 10.5,17A2.5,2.5 0 0,0 13,14.5V9H16M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z">
+                            </path>
+                        </svg>
+                    </div>
+                    <h3 class="album-title" data-i18n="preGentle">Gentle</h3>
+                    <p class="album-desc" data-i18n="preGentleDesc">Preserves dynamics, subtle leveling</p>
+                </div>
+                <div class="album-card">
+                    <div class="album-cover cover-strong">
+                        <svg viewBox="0 0 24 24" class="cover-icon">
+                            <path fill="currentColor"
+                                d="M13.5,21L12,17L10.5,21H13.5M12,2L5,6V11C5,16.5 8,21.5 12,23C16,21.5 19,16.5 19,11V6L12,2M12,4.2L17,6.8V11C17,15.5 14.8,19.6 12,20.8C9.2,19.6 7,15.5 7,11V6.8L12,4.2M12,7L10.5,11H13.5L12,7Z">
+                            </path>
+                        </svg>
+                    </div>
+                    <h3 class="album-title" data-i18n="preStrong">Strong</h3>
+                    <p class="album-desc" data-i18n="preStrongDesc">Firm leveling for large variations</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const translations = {
+            en: {
+                navBrand: "Music Control",
+                searchPlaceholder: "Search features, presets...",
+                install: "Install",
+                badge: "BROWSER EXTENSION",
+                artistStats: "Real-time audio compressor & limiter for YouTube Music. Zero distortion.",
+                getStarted: "Get Started",
+                viewSource: "View Source",
+                topFeatures: "Top Features",
+                feat1Title: "Compressor & Limiter",
+                feat1Desc: "Controls track dynamics to prevent clipping and balance volume.",
+                feat1Tag: "Core Engine",
+                enabled: "Enabled",
+                feat2Title: "Auto-Gain Equalizer",
+                feat2Desc: "Equalizes perceived loudness across different tracks automatically.",
+                feat2Tag: "Volume Stability",
+                feat3Title: "Smart Mode Detection",
+                feat3Desc: "Detects if a song is too compressed or too dynamic on the fly.",
+                feat3Tag: "Adaptive Audio",
+                feat4Title: "Highpass Filter",
+                feat4Desc: "Removes unwanted sub-bass rumble (< 30 Hz).",
+                feat4Tag: "Frequency Control",
+                presets: "Recommended Presets",
+                preSmart: "Smart Mode",
+                preSmartDesc: "Real-time dynamic adjustment",
+                preNight: "Night Mode",
+                preNightDesc: "Boosts quiet parts, contains peaks",
+                preGentle: "Gentle",
+                preGentleDesc: "Preserves dynamics, subtle leveling",
+                preStrong: "Strong",
+                preStrongDesc: "Firm leveling for large variations"
+            },
+            pt: {
+                navBrand: "Controle de Música",
+                searchPlaceholder: "Buscar recursos, presets...",
+                install: "Instalar",
+                badge: "EXTENSÃO DE NAVEGADOR",
+                artistStats: "Compressor e limiter de áudio em tempo real para YouTube Music. Zero distorção.",
+                getStarted: "Começar",
+                viewSource: "Ver Código",
+                topFeatures: "Principais Recursos",
+                feat1Title: "Compressor & Limiter",
+                feat1Desc: "Controla a dinâmica da faixa para evitar distorção e equilibrar o volume.",
+                feat1Tag: "Motor Principal",
+                enabled: "Ativado",
+                feat2Title: "Equalizador de Ganho",
+                feat2Desc: "Equaliza a altura percebida entre diferentes faixas automaticamente.",
+                feat2Tag: "Estabilidade de Volume",
+                feat3Title: "Detecção Inteligente",
+                feat3Desc: "Detecta se a música está muito comprimida ou muito dinâmica em tempo real.",
+                feat3Tag: "Áudio Adaptativo",
+                feat4Title: "Filtro Passa-Alta",
+                feat4Desc: "Remove frequências sub-graves indesejadas (< 30 Hz).",
+                feat4Tag: "Controle de Frequência",
+                presets: "Presets Recomendados",
+                preSmart: "Modo Inteligente",
+                preSmartDesc: "Ajuste dinâmico em tempo real",
+                preNight: "Modo Noturno",
+                preNightDesc: "Aumenta partes baixas, contém picos",
+                preGentle: "Suave",
+                preGentleDesc: "Preserva dinâmica, nivelamento sutil",
+                preStrong: "Forte",
+                preStrongDesc: "Nivelamento firme para grandes variações"
+            }
+        };
+
+        let currentLang = 'en';
+        const langToggle = document.getElementById('langToggle');
+
+        langToggle.addEventListener('click', () => {
+            currentLang = currentLang === 'en' ? 'pt' : 'en';
+            langToggle.textContent = currentLang === 'en' ? 'PT' : 'EN';
+            document.documentElement.lang = currentLang;
+            
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[currentLang][key]) {
+                    el.textContent = translations[currentLang][key];
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
