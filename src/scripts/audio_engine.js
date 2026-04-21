@@ -31,6 +31,53 @@
             return this.mediaElement === el;
         }
 
+        ensureRunning() {
+            if (!this.context) return;
+            if (this.context.state === 'closed') return;
+            this._ensureResumed();
+        }
+
+        isElementConnected() {
+            return !!(this.mediaElement && this.mediaElement.isConnected);
+        }
+
+        isContextHealthy() {
+            return !!(this.context && this.context.state !== 'closed');
+        }
+
+        forceTeardown() {
+            this._teardown();
+        }
+
+        getFrequencyBins(numBins) {
+            const analyser = this.nodes.analyser;
+            if (!analyser || !this._attached) return null;
+            const bufferLength = analyser.frequencyBinCount;
+            const data = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(data);
+
+            const bins = new Array(numBins).fill(0);
+            const usableLen = Math.floor(bufferLength * 0.6);
+            const logBase = Math.log(usableLen + 1);
+            let prevIdx = 0;
+            for (let i = 0; i < numBins; i++) {
+                const nextIdx = Math.max(
+                    prevIdx + 1,
+                    Math.floor((Math.exp(logBase * (i + 1) / numBins) - 1))
+                );
+                const end = Math.min(usableLen, nextIdx);
+                let sum = 0;
+                let count = 0;
+                for (let j = prevIdx; j < end; j++) {
+                    sum += data[j];
+                    count++;
+                }
+                bins[i] = count ? (sum / count / 255) : 0;
+                prevIdx = end;
+            }
+            return bins;
+        }
+
         attach(mediaElement, settings) {
             if (this._attached && this.mediaElement === mediaElement) {
                 this.apply(settings);
@@ -354,6 +401,12 @@
             root.document.addEventListener('click', resume, opts);
             root.document.addEventListener('keydown', resume, opts);
             root.document.addEventListener('play', resume, { capture: true });
+            root.document.addEventListener('playing', resume, { capture: true });
+            root.addEventListener('focus', resume);
+            if (this.mediaElement) {
+                this.mediaElement.addEventListener('play', resume);
+                this.mediaElement.addEventListener('playing', resume);
+            }
         }
 
         _teardown() {

@@ -10,17 +10,17 @@
             highpass: { enabled: true, frequency: 30 },
             autoGain: {
                 enabled: true,
-                targetDb: -18,
-                maxBoostDb: 12,
+                targetDb: -20,
+                maxBoostDb: 6,
                 maxCutDb: 6,
-                responseMs: 500
+                responseMs: 1500
             },
             compressor: {
-                threshold: -18,
+                threshold: -20,
                 knee: 6,
-                ratio: 3,
-                attack: 0.01,
-                release: 0.2
+                ratio: 2.5,
+                attack: 0.015,
+                release: 0.25
             },
             makeupGain: 1.0,
             limiter: {
@@ -41,17 +41,17 @@
             highpass: { enabled: true, frequency: 30 },
             autoGain: {
                 enabled: true,
-                targetDb: -18,
-                maxBoostDb: 14,
+                targetDb: -20,
+                maxBoostDb: 8,
                 maxCutDb: 8,
-                responseMs: 600
+                responseMs: 1800
             },
             compressor: {
-                threshold: -18,
+                threshold: -20,
                 knee: 8,
-                ratio: 4,
-                attack: 0.006,
-                release: 0.2
+                ratio: 3,
+                attack: 0.008,
+                release: 0.25
             },
             makeupGain: 1.0,
             limiter: {
@@ -103,17 +103,17 @@
             highpass: { enabled: true, frequency: 30 },
             autoGain: {
                 enabled: true,
-                targetDb: -18,
-                maxBoostDb: 15,
+                targetDb: -19,
+                maxBoostDb: 10,
                 maxCutDb: 9,
-                responseMs: 400
+                responseMs: 1200
             },
             compressor: {
-                threshold: -24,
+                threshold: -22,
                 knee: 6,
-                ratio: 6,
-                attack: 0.005,
-                release: 0.15
+                ratio: 4,
+                attack: 0.006,
+                release: 0.18
             },
             makeupGain: 1.0,
             limiter: {
@@ -205,7 +205,7 @@
         autoGainResponse: { min: 100, max: 3000, step: 50 }
     });
 
-    const STORAGE_KEY = 'ytms.settings.v2';
+    const STORAGE_KEY = 'ytms.settings.v3';
     const DEFAULT_PRESET_ID = 'default';
 
     function clonePreset(id) {

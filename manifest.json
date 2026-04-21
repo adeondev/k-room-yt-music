@@ -35,5 +35,20 @@
             "48": "icons/icon.png",
             "128": "icons/icon.png"
         }
-    }
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "src/popup/popup.html",
+                "src/popup/popup.css",
+                "src/popup/popup.js",
+                "src/scripts/presets.js",
+                "src/locales/locales.json",
+                "icons/icon.png"
+            ],
+            "matches": [
+                "*://music.youtube.com/*"
+            ]
+        }
+    ]
 }
