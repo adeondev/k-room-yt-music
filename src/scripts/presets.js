@@ -2,6 +2,39 @@
     'use strict';
 
     const PRESETS = Object.freeze({
+        progressive: {
+            id: 'progressive',
+            label: 'Progressive (Recommended)',
+            description: 'Analisa os primeiros segundos da faixa, calcula a loudness média e trava o volume ideal. Sem oscilações.',
+            enabled: true,
+            highpass: { enabled: true, frequency: 30 },
+            autoGain: {
+                enabled: true,
+                mode: 'scan',
+                targetDb: -20,
+                maxBoostDb: 8,
+                maxCutDb: 8,
+                responseMs: 800
+            },
+            compressor: {
+                threshold: -6,
+                knee: 12,
+                ratio: 1.5,
+                attack: 0.02,
+                release: 0.3
+            },
+            makeupGain: 1.0,
+            limiter: {
+                enabled: true,
+                threshold: -1,
+                knee: 0,
+                ratio: 20,
+                attack: 0.001,
+                release: 0.05
+            },
+            adaptive: { enabled: false, headroomDb: 6, minRatio: 2, maxRatio: 6 },
+            eq: { id: 'flat' }
+        },
         default: {
             id: 'default',
             label: 'Padrão (Estável)',
@@ -212,7 +245,7 @@
     });
 
     const STORAGE_KEY = 'ytms.settings.v4';
-    const DEFAULT_PRESET_ID = 'default';
+    const DEFAULT_PRESET_ID = 'progressive';
 
     const EQ_BANDS = Object.freeze([60, 250, 1000, 4000, 12000]);
 
@@ -270,6 +303,9 @@
         s.autoGain.maxCutDb = clamp(s.autoGain.maxCutDb, LIMITS.autoGainCut);
         s.autoGain.responseMs = clamp(s.autoGain.responseMs, LIMITS.autoGainResponse);
         s.autoGain.enabled = Boolean(s.autoGain.enabled);
+        if (!s.autoGain.mode || (s.autoGain.mode !== 'scan' && s.autoGain.mode !== 'realtime')) {
+            s.autoGain.mode = 'realtime';
+        }
 
         if (!s.adaptive) {
             s.adaptive = { enabled: false, headroomDb: 6, minRatio: 2, maxRatio: 6 };

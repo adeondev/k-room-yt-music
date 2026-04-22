@@ -216,7 +216,10 @@
                     <div class="meter__fill meter__fill--boost" id="meter-autogain-boost"></div>
                     <div class="meter__fill meter__fill--cut" id="meter-autogain-cut"></div>
                 </div>
-                <output id="meter-autogain-value">0.0 dB</output>
+                <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
+                    <output id="meter-autogain-value">0.0 dB</output>
+                    <span class="scan-badge" id="scan-badge" hidden></span>
+                </div>
             </div>
             <div class="meter" id="adaptive-meter" hidden>
                 <span class="meter__label" data-i18n="meterDynamic">Dinâmica</span>

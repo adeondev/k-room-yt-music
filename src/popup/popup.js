@@ -58,7 +58,8 @@
         mediaNext: document.getElementById('media-next'),
         mediaTimeCurrent: document.getElementById('media-time-current'),
         mediaTimeRemaining: document.getElementById('media-time-remaining'),
-        mediaProgress: document.getElementById('media-progress')
+        mediaProgress: document.getElementById('media-progress'),
+        scanBadge: document.getElementById('scan-badge')
     };
 
     let state = null;
@@ -70,7 +71,7 @@
     let isSeeking = false;
 
     function formatTime(s) {
-        if (isNaN(s)) return '0:00';
+        if (!isFinite(s) || isNaN(s)) return '0:00';
         s = Math.max(0, s);
         const m = Math.floor(s / 60);
         const sec = Math.floor(s % 60);
@@ -197,6 +198,7 @@
             a.autoGain.maxBoostDb === b.autoGain.maxBoostDb &&
             a.autoGain.maxCutDb === b.autoGain.maxCutDb &&
             a.autoGain.responseMs === b.autoGain.responseMs &&
+            ((a.autoGain.mode) || 'realtime') === ((b.autoGain.mode) || 'realtime') &&
             a.adaptive.enabled === b.adaptive.enabled &&
             a.adaptive.headroomDb === b.adaptive.headroomDb &&
             a.adaptive.minRatio === b.adaptive.minRatio &&
@@ -541,13 +543,30 @@
             updateBipolarMeter(meters.autoGainDb || 0);
             updateCrestMeter(meters.crestDb || 0, meters.adaptiveRatio || 0);
             
-            if (meters.currentTime !== undefined && meters.duration !== undefined) {
+            if (meters.currentTime !== undefined && meters.duration !== undefined &&
+                isFinite(meters.duration) && meters.duration > 0) {
+                const ct = Math.min(meters.currentTime, meters.duration);
                 if (!isSeeking && elements.mediaProgress) {
                     elements.mediaProgress.max = meters.duration;
-                    elements.mediaProgress.value = meters.currentTime;
-                    elements.mediaTimeCurrent.textContent = formatTime(meters.currentTime);
-                    elements.mediaTimeRemaining.textContent = '-' + formatTime(meters.duration - meters.currentTime);
+                    elements.mediaProgress.value = ct;
+                    elements.mediaTimeCurrent.textContent = formatTime(ct);
+                    elements.mediaTimeRemaining.textContent = '-' + formatTime(meters.duration - ct);
                     updateProgressFill(elements.mediaProgress);
+                }
+            }
+
+            if (elements.scanBadge) {
+                const phase = meters.scanPhase;
+                const isScanMode = state && state.autoGain && state.autoGain.mode === 'scan';
+                if (isScanMode && (phase === 'scanning' || phase === 'locked')) {
+                    elements.scanBadge.hidden = false;
+                    elements.scanBadge.className = 'scan-badge ' +
+                        (phase === 'locked' ? 'scan-badge--locked' : 'scan-badge--scanning');
+                    elements.scanBadge.textContent = phase === 'locked'
+                        ? ('🔒 ' + (i18nData.scanPhaseLocked || 'Locked'))
+                        : ('🔍 ' + (i18nData.scanPhaseScanning || 'Scanning...'));
+                } else {
+                    elements.scanBadge.hidden = true;
                 }
             }
         }, 120);

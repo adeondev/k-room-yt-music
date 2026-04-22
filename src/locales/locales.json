@@ -60,6 +60,8 @@
     "dynDynamic": "dinâmica",
     "preset_default_label": "Padrão (Estável)",
     "preset_default_desc": "Nivela o volume entre músicas e estabiliza a dinâmica. Sem distorção.",
+    "preset_progressive_label": "Progressive (Recommended)",
+    "preset_progressive_desc": "Analisa os primeiros segundos da faixa e trava o volume ideal. Sem oscilações.",
     "preset_smart_label": "Inteligente",
     "preset_smart_desc": "Detecta o perfil de cada faixa (dinâmica ou esmagada) e ajusta compressão em tempo real.",
     "preset_gentle_label": "Suave",
@@ -69,7 +71,9 @@
     "preset_night_label": "Modo Noturno",
     "preset_night_desc": "Eleva partes baixas e contém picos. Ideal para ouvir à noite.",
     "preset_off_label": "Desligado",
-    "preset_off_desc": "Áudio original sem processamento."
+    "preset_off_desc": "Áudio original sem processamento.",
+    "scanPhaseScanning": "Analisando...",
+    "scanPhaseLocked": "Travado"
   },
   "en": {
     "appTitle": "K-ROOM",
@@ -132,6 +136,8 @@
     "dynDynamic": "dynamic",
     "preset_default_label": "Default (Stable)",
     "preset_default_desc": "Levels volume between songs and stabilizes dynamics. No distortion.",
+    "preset_progressive_label": "Progressive (Recommended)",
+    "preset_progressive_desc": "Scans the first seconds of the track and locks the ideal volume. No fluctuations.",
     "preset_smart_label": "Smart",
     "preset_smart_desc": "Detects track profile (dynamic or crushed) and adjusts compression in real-time.",
     "preset_gentle_label": "Gentle",
@@ -141,6 +147,8 @@
     "preset_night_label": "Night Mode",
     "preset_night_desc": "Boosts quiet parts and contains peaks. Ideal for night listening.",
     "preset_off_label": "Off",
-    "preset_off_desc": "Original audio without processing."
+    "preset_off_desc": "Original audio without processing.",
+    "scanPhaseScanning": "Scanning...",
+    "scanPhaseLocked": "Locked"
   }
 }

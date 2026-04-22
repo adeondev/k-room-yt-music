@@ -9,6 +9,7 @@
     let attachAttempts = 0;
     const MAX_LOG_ATTEMPTS = 3;
     let suspendedCount = 0;
+    let _lastVideoId = null;
 
     function log(...args) {
         if (console && console.debug) {
@@ -415,16 +416,17 @@
                 case 'YTMS_GET_METERS': {
                     const m = engine.getMeters();
                     const v = document.querySelector('video');
-                    if (v && !isNaN(v.duration)) {
-                        m.currentTime = v.currentTime;
+                    if (v && isFinite(v.duration) && v.duration > 0) {
+                        m.currentTime = Math.min(v.currentTime, v.duration);
                         m.duration = v.duration;
                     }
+                    m.scanPhase = engine.getScanPhase();
                     reply(m);
                     return false;
                 }
                 case 'YTMS_MEDIA_SEEK': {
                     const v = document.querySelector('video');
-                    if (v && !isNaN(v.duration)) v.currentTime = msg.time;
+                    if (v && isFinite(v.duration) && v.duration > 0) v.currentTime = msg.time;
                     reply({ ok: true });
                     return false;
                 }
@@ -611,7 +613,32 @@
         window.addEventListener('pageshow', healthCheck);
         window.addEventListener('online', healthCheck);
 
+        _lastVideoId = getVideoIdFromUrl();
+        document.addEventListener('yt-navigate-finish', onPossibleTrackChange);
+        window.addEventListener('popstate', onPossibleTrackChange);
+        setInterval(onPossibleTrackChange, 1500);
+
         setInterval(healthCheck, 2000);
+    }
+
+    function getVideoIdFromUrl() {
+        try {
+            return new URL(window.location.href).searchParams.get('v') || null;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function onPossibleTrackChange() {
+        const vid = getVideoIdFromUrl();
+        if (vid && vid !== _lastVideoId) {
+            _lastVideoId = vid;
+            if (currentSettings && currentSettings.autoGain &&
+                currentSettings.autoGain.mode === 'scan') {
+                engine.resetScan();
+                log('Track change detected — scan reset.');
+            }
+        }
     }
 
     boot();

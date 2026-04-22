@@ -4,6 +4,8 @@
     const AUTO_GAIN_TICK_MS = 50;
     const SILENCE_GATE_DB = -55;
     const ANALYSER_FFT = 2048;
+    const SCAN_PROVISIONAL_MS = 1500;
+    const SCAN_LOCK_MS = 8000;
 
     class AudioEngine {
         constructor() {
@@ -24,6 +26,9 @@
             this._currentAdaptiveRatio = 0;
             this._currentAdaptiveThresholdDb = 0;
             this._currentRoute = null;
+            this._scanPhase = 'idle';
+            this._scanAccumulator = { sumSquares: 0, count: 0, elapsedMs: 0 };
+            this._scanLockedGainDb = 0;
         }
 
         isAttached() {
@@ -50,6 +55,23 @@
 
         forceTeardown() {
             this._teardown();
+        }
+
+        resetScan() {
+            this._scanPhase = 'scanning';
+            this._scanAccumulator = { sumSquares: 0, count: 0, elapsedMs: 0 };
+            this._scanLockedGainDb = 0;
+            this._currentAutoGainDb = 0;
+            this._emaMeanSquare = 0;
+            this._peakEnvelope = 0;
+            this._silenceTicks = 0;
+            if (this.nodes.autoGain) {
+                this._smoothParam(this.nodes.autoGain.gain, 1.0, 0.15);
+            }
+        }
+
+        getScanPhase() {
+            return this._scanPhase;
         }
 
         getFrequencyBins(numBins) {
@@ -146,6 +168,11 @@
                 this._currentAdaptiveRatio = 0;
                 this._currentAdaptiveThresholdDb = 0;
             }
+
+            const newMode = settings.autoGain ? (settings.autoGain.mode || 'realtime') : 'realtime';
+            if (newMode !== 'scan' && this._scanPhase !== 'idle') {
+                this._scanPhase = 'idle';
+            }
         }
 
         getMeters() {
@@ -169,7 +196,8 @@
                 crestDb: this._currentCrestDb,
                 adaptiveRatio: this._currentAdaptiveRatio,
                 adaptiveThresholdDb: this._currentAdaptiveThresholdDb,
-                contextState: this.context ? this.context.state : 'unknown'
+                contextState: this.context ? this.context.state : 'unknown',
+                scanPhase: this._scanPhase
             };
         }
 
@@ -321,6 +349,7 @@
             if (!ag || !ag.enabled) {
                 this._smoothParam(this.nodes.autoGain.gain, 1, 0.2);
                 this._currentAutoGainDb = 0;
+                this._scanPhase = 'idle';
             }
         }
 
@@ -342,6 +371,12 @@
         _autoGainTick() {
             if (!this._attached || !this.settings) return;
             if (this.settings.enabled === false) return;
+
+            const mode = (this.settings.autoGain && this.settings.autoGain.mode) || 'realtime';
+            if (mode === 'scan') {
+                this._scanAutoGainTick();
+                return;
+            }
 
             const sample = this._sampleAudio();
             if (sample === null) return;
@@ -383,6 +418,74 @@
 
             this._applyAutoGainUpdate(rmsDb);
             this._applyAdaptiveUpdate(rmsDb);
+        }
+
+        _scanAutoGainTick() {
+            const ag = this.settings.autoGain;
+            if (!ag || !ag.enabled) {
+                this._scanPhase = 'idle';
+                this._currentAutoGainDb = 0;
+                return;
+            }
+
+            const sample = this._sampleAudio();
+            if (sample === null) return;
+
+            const instDb = 10 * Math.log10(Math.max(sample.meanSquare, 1e-12));
+
+            if (instDb < SILENCE_GATE_DB) {
+                this._silenceTicks = (this._silenceTicks || 0) + 1;
+                return;
+            }
+            this._silenceTicks = 0;
+
+            const peakSquared = sample.peak * sample.peak;
+            if (peakSquared > this._peakEnvelope) {
+                this._peakEnvelope = peakSquared;
+            } else {
+                const decay = Math.exp(-AUTO_GAIN_TICK_MS / 1000);
+                this._peakEnvelope = this._peakEnvelope * decay;
+            }
+
+            if (this._scanPhase === 'locked') {
+                const alpha = AUTO_GAIN_TICK_MS / 2000;
+                this._emaMeanSquare = this._emaMeanSquare * (1 - alpha) + sample.meanSquare * alpha;
+                const rmsDb = 10 * Math.log10(Math.max(this._emaMeanSquare, 1e-12));
+                const peakDb = 10 * Math.log10(Math.max(this._peakEnvelope, 1e-12));
+                this._currentCrestDb = Math.max(0, peakDb - rmsDb);
+                return;
+            }
+
+            if (this._scanPhase !== 'scanning') {
+                this._scanPhase = 'scanning';
+            }
+
+            this._scanAccumulator.sumSquares += sample.meanSquare;
+            this._scanAccumulator.count++;
+            this._scanAccumulator.elapsedMs += AUTO_GAIN_TICK_MS;
+
+            const avgMeanSquare = this._scanAccumulator.sumSquares / this._scanAccumulator.count;
+            const avgRmsDb = 10 * Math.log10(Math.max(avgMeanSquare, 1e-12));
+
+            this._emaMeanSquare = avgMeanSquare;
+            const peakDb = 10 * Math.log10(Math.max(this._peakEnvelope, 1e-12));
+            this._currentCrestDb = Math.max(0, peakDb - avgRmsDb);
+
+            let gainDb = ag.targetDb - avgRmsDb;
+            if (gainDb > ag.maxBoostDb) gainDb = ag.maxBoostDb;
+            if (gainDb < -ag.maxCutDb) gainDb = -ag.maxCutDb;
+
+            if (this._scanAccumulator.elapsedMs >= SCAN_LOCK_MS) {
+                this._currentAutoGainDb = gainDb;
+                this._scanLockedGainDb = gainDb;
+                const gain = Math.pow(10, gainDb / 20);
+                this._smoothParam(this.nodes.autoGain.gain, gain, 0.3);
+                this._scanPhase = 'locked';
+            } else if (this._scanAccumulator.elapsedMs >= SCAN_PROVISIONAL_MS) {
+                this._currentAutoGainDb = gainDb;
+                const gain = Math.pow(10, gainDb / 20);
+                this._smoothParam(this.nodes.autoGain.gain, gain, 0.5);
+            }
         }
 
         _applyAutoGainUpdate(rmsDb) {
@@ -498,6 +601,9 @@
             this._currentAdaptiveRatio = 0;
             this._currentAdaptiveThresholdDb = 0;
             this._currentRoute = null;
+            this._scanPhase = 'idle';
+            this._scanAccumulator = { sumSquares: 0, count: 0, elapsedMs: 0 };
+            this._scanLockedGainDb = 0;
         }
     }
 
