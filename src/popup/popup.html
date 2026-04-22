@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YT Music Volume Stabilizer</title>
+    <link rel="stylesheet" href="popup.css" />
+</head>
+
+<body>
+    <main class="app">
+        <header class="header">
+            <div class="header__title">
+                <div class="header__logo" role="img" aria-label="K-ROOM"></div>
+            </div>
+            <div class="header__actions">
+                <select id="lang-select" class="lang-select" aria-label="Language">
+                    <option value="pt-BR">PT</option>
+                    <option value="en">EN</option>
+                </select>
+                <label class="switch" title="Ativar / Desativar">
+                    <input type="checkbox" id="enabled-toggle" />
+                    <span class="switch__slider"></span>
+                </label>
+            </div>
+        </header>
+
+        <section class="section">
+            <h2 class="section__title" data-i18n="sectionPreset">Preset</h2>
+            <div class="presets" id="presets"></div>
+            <p class="section__hint" id="preset-description"></p>
+        </section>
+
+        <section class="section">
+            <h2 class="section__title" data-i18n="sectionSound">Som</h2>
+            <div class="eq-presets" id="eq-presets"></div>
+        </section>
+
+        <section class="section">
+            <h2 class="section__title" data-i18n="sectionMedia">Controles de Mídia</h2>
+            <div class="media-timeline">
+                <span id="media-time-current">0:00</span>
+                <input type="range" id="media-progress" class="media-progress-slider" min="0" max="100" value="0" step="0.1">
+                <span id="media-time-remaining">-0:00</span>
+            </div>
+            <div class="media-controls">
+                <button id="media-prev" class="btn--media" aria-label="Voltar" title="Voltar">
+                    <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M6,18V6H8V18H6M9.5,12L18,6V18L9.5,12Z"/></svg>
+                </button>
+                <button id="media-play-pause" class="btn--media" aria-label="Tocar / Pausar" title="Tocar / Pausar">
+                    <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M3,5V19L11,12M13,19H16V5H13M18,5V19H21V5"/></svg>
+                </button>
+                <button id="media-next" class="btn--media" aria-label="Avançar" title="Avançar">
+                    <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M16,18H18V6H16M6,18L14.5,12L6,6V18Z"/></svg>
+                </button>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section__title" data-i18n="sectionLeveling">Nivelamento entre músicas</h2>
+
+            <div class="control control--inline">
+                <label class="checkbox" for="autogain-enabled">
+                    <input type="checkbox" id="autogain-enabled" />
+                    <span data-i18n="lblAutogain">Igualar o volume médio entre faixas</span>
+                </label>
+            </div>
+
+            <div class="control">
+                <div class="control__row">
+                    <label for="autogain-target" data-i18n="lblTargetVolume">Volume alvo</label>
+                    <output id="autogain-target-output"></output>
+                </div>
+                <input type="range" id="autogain-target" />
+                <div class="control__scale">
+                    <span data-i18n="scaleLower">Mais baixo</span>
+                    <span data-i18n="scaleHigher">Mais alto</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section__title" data-i18n="sectionQuickControls">Controles rápidos</h2>
+
+            <div class="control">
+                <div class="control__row">
+                    <label for="ratio" data-i18n="lblStability">Estabilidade</label>
+                    <output id="ratio-output"></output>
+                </div>
+                <input type="range" id="ratio" />
+                <div class="control__scale">
+                    <span data-i18n="scaleDynamic">Dinâmico</span>
+                    <span data-i18n="scaleStable">Estável</span>
+                </div>
+            </div>
+
+            <div class="control">
+                <div class="control__row">
+                    <label for="makeup" data-i18n="lblMakeup">Volume compensado</label>
+                    <output id="makeup-output"></output>
+                </div>
+                <input type="range" id="makeup" />
+                <div class="control__scale">
+                    <span data-i18n="scaleOriginal">Original</span>
+                    <span data-i18n="scaleHigher">Mais alto</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <button class="accordion" id="advanced-toggle" aria-expanded="false">
+                <span data-i18n="btnAdvanced">Avançado</span>
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                    <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
+            </button>
+
+            <div class="advanced" id="advanced" hidden>
+                <div class="control">
+                    <div class="control__row">
+                        <label for="threshold" data-i18n="lblThreshold">Threshold (dB)</label>
+                        <output id="threshold-output"></output>
+                    </div>
+                    <input type="range" id="threshold" />
+                </div>
+
+                <div class="control">
+                    <div class="control__row">
+                        <label for="knee" data-i18n="lblKnee">Knee</label>
+                        <output id="knee-output"></output>
+                    </div>
+                    <input type="range" id="knee" />
+                </div>
+
+                <div class="control">
+                    <div class="control__row">
+                        <label for="attack" data-i18n="lblAttack">Attack (ms)</label>
+                        <output id="attack-output"></output>
+                    </div>
+                    <input type="range" id="attack" />
+                </div>
+
+                <div class="control">
+                    <div class="control__row">
+                        <label for="release" data-i18n="lblRelease">Release (ms)</label>
+                        <output id="release-output"></output>
+                    </div>
+                    <input type="range" id="release" />
+                </div>
+
+                <div class="control">
+                    <div class="control__row">
+                        <label for="limiter-threshold" data-i18n="lblLimiterThreshold">Teto do limiter (dB)</label>
+                        <output id="limiter-threshold-output"></output>
+                    </div>
+                    <input type="range" id="limiter-threshold" />
+                </div>
+
+                <div class="control control--inline">
+                    <label class="checkbox" for="limiter-enabled">
+                        <input type="checkbox" id="limiter-enabled" />
+                        <span data-i18n="lblLimiterEnable">Limiter de segurança (recomendado)</span>
+                    </label>
+                </div>
+
+                <div class="control control--inline">
+                    <label class="checkbox" for="highpass-enabled">
+                        <input type="checkbox" id="highpass-enabled" />
+                        <span data-i18n="lblHighpassEnable">Filtro grave sub (remove ruído &lt; 30 Hz)</span>
+                    </label>
+                </div>
+
+                <div class="control">
+                    <div class="control__row">
+                        <label for="highpass-frequency" data-i18n="lblHighpassFreq">Corte do highpass (Hz)</label>
+                        <output id="highpass-frequency-output"></output>
+                    </div>
+                    <input type="range" id="highpass-frequency" />
+                </div>
+
+                <hr class="divider" />
+
+                <div class="control">
+                    <div class="control__row">
+                        <label for="autogain-boost" data-i18n="lblBoost">Boost máx. para músicas baixas (dB)</label>
+                        <output id="autogain-boost-output"></output>
+                    </div>
+                    <input type="range" id="autogain-boost" />
+                </div>
+
+                <div class="control">
+                    <div class="control__row">
+                        <label for="autogain-cut" data-i18n="lblCut">Redução máx. para músicas altas (dB)</label>
+                        <output id="autogain-cut-output"></output>
+                    </div>
+                    <input type="range" id="autogain-cut" />
+                </div>
+
+                <div class="control">
+                    <div class="control__row">
+                        <label for="autogain-response" data-i18n="lblResponse">Tempo de resposta (ms)</label>
+                        <output id="autogain-response-output"></output>
+                    </div>
+                    <input type="range" id="autogain-response" />
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section__title" data-i18n="sectionMeters">Medidores</h2>
+            <div class="meter">
+                <span class="meter__label" data-i18n="meterAutoGain">Auto-ganho</span>
+                <div class="meter__bar meter__bar--bipolar">
+                    <div class="meter__fill meter__fill--boost" id="meter-autogain-boost"></div>
+                    <div class="meter__fill meter__fill--cut" id="meter-autogain-cut"></div>
+                </div>
+                <output id="meter-autogain-value">0.0 dB</output>
+            </div>
+            <div class="meter" id="adaptive-meter" hidden>
+                <span class="meter__label" data-i18n="meterDynamic">Dinâmica</span>
+                <div class="meter__bar">
+                    <div class="meter__fill meter__fill--crest" id="meter-crest"></div>
+                </div>
+                <output id="meter-crest-value">0.0 dB</output>
+            </div>
+            <p class="section__hint" id="adaptive-hint" hidden></p>
+            <div class="meter">
+                <span class="meter__label" data-i18n="meterCompressor">Compressor</span>
+                <div class="meter__bar">
+                    <div class="meter__fill" id="meter-compressor"></div>
+                </div>
+                <output id="meter-compressor-value">0.0 dB</output>
+            </div>
+            <div class="meter">
+                <span class="meter__label" data-i18n="meterLimiter">Limiter</span>
+                <div class="meter__bar">
+                    <div class="meter__fill meter__fill--danger" id="meter-limiter"></div>
+                </div>
+                <output id="meter-limiter-value">0.0 dB</output>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <button class="btn btn--ghost" id="reset-btn" data-i18n="btnReset">Restaurar padrão</button>
+            <span class="footer__version" id="version-label"></span>
+        </footer>
+    </main>
+
+    <script src="../scripts/presets.js"></script>
+    <script src="popup.js"></script>
+</body>
+
+</html>

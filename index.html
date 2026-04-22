@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-ROOM | YT Music Volume Control</title>
+
+    <meta name="description" content="K-ROOM é um compressor e limiter de áudio em tempo real para YouTube Music. Volume consistente. Zero distorção.">
+    <meta name="keywords" content="youtube music, audio compressor, limiter, volume control, auto-gain, k-room, browser extension, extensão">
+    <meta name="author" content="adeondev">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="K-ROOM | YT Music Volume Control">
+    <meta property="og:description" content="Real-time audio compressor & limiter for YouTube Music. Zero distortion.">
+    <meta property="og:image" content="https://raw.githubusercontent.com/adeondev/k-room-yt-music/main/icons/icon.png">
+    <meta property="og:url" content="https://github.com/adeondev/k-room-yt-music">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="K-ROOM | YT Music Volume Control">
+    <meta name="twitter:description" content="Real-time audio compressor & limiter for YouTube Music. Zero distortion.">
+    <meta name="twitter:image" content="https://raw.githubusercontent.com/adeondev/k-room-yt-music/main/icons/icon.png">
+
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="icons/icon.png">
+
+    <style>
+        /* ─── DEMO MODAL OVERLAY ─── */
+        .demo-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.72);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.22s;
+            padding: 24px;
+        }
+        .demo-overlay.is-open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .demo-wrap {
+            position: relative;
+            transform: scale(0.95) translateY(14px);
+            transition: transform 0.24s cubic-bezier(0.2, 0, 0.2, 1);
+        }
+        .demo-overlay.is-open .demo-wrap {
+            transform: scale(1) translateY(0);
+        }
+        .demo-close-btn {
+            position: absolute;
+            top: -12px;
+            right: -12px;
+            width: 28px;
+            height: 28px;
+            background: #303030;
+            color: #aaa;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            line-height: 1;
+            z-index: 2;
+            transition: background 0.15s, color 0.15s;
+            font-family: Arial, sans-serif;
+        }
+        .demo-close-btn:hover { background: #444; color: #fff; }
+
+        /* ─── SCOPED POPUP STYLES ─── */
+        .demo-popup {
+            width: 360px;
+            max-height: 82vh;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #303030 transparent;
+            background: #0f0f0f;
+            color: #ffffff;
+            font-family: "Roboto", "Noto Sans", Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            border-radius: 14px;
+            box-shadow: 0 28px 72px rgba(0, 0, 0, 0.85);
+            -webkit-font-smoothing: antialiased;
+        }
+        .demo-popup::-webkit-scrollbar { width: 6px; }
+        .demo-popup::-webkit-scrollbar-thumb { background: #303030; border-radius: 3px; }
+
+        .demo-popup .app { display: flex; flex-direction: column; }
+
+        .demo-popup .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            border-bottom: 1px solid #303030;
+            background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .demo-popup .header__logo {
+            width: 36px; height: 36px;
+            background-image: url("icons/icon.png");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        .demo-popup .header__actions { display: flex; align-items: center; gap: 12px; }
+
+        .demo-popup .switch { position: relative; width: 42px; height: 24px; flex-shrink: 0; cursor: pointer; }
+        .demo-popup .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+        .demo-popup .switch__slider {
+            position: absolute; inset: 0;
+            background: #2a2a2a; border-radius: 999px;
+            transition: background 160ms cubic-bezier(0.2, 0, 0.2, 1);
+        }
+        .demo-popup .switch__slider::before {
+            content: ""; position: absolute;
+            top: 3px; left: 3px; width: 18px; height: 18px;
+            background: #aaaaaa; border-radius: 50%;
+            transition: transform 160ms cubic-bezier(0.2, 0, 0.2, 1), background 160ms;
+        }
+        .demo-popup .switch input:checked + .switch__slider { background: #ff0033; }
+        .demo-popup .switch input:checked + .switch__slider::before { transform: translateX(18px); background: #fff; }
+
+        .demo-popup .section {
+            display: flex; flex-direction: column; gap: 12px;
+            padding: 16px; border-bottom: 1px solid #303030;
+        }
+        .demo-popup .section:last-of-type { border-bottom: none; }
+        .demo-popup .section__title { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+        .demo-popup .section__hint { font-size: 11px; color: #aaaaaa; line-height: 1.5; min-height: 16px; }
+
+        .demo-popup .presets { display: flex; flex-wrap: wrap; gap: 8px; }
+        .demo-popup .preset {
+            all: unset;
+            padding: 7px 14px;
+            background: #272727; border-radius: 9999px;
+            font-size: 12px; font-weight: 500; color: #fff;
+            cursor: pointer; text-align: center;
+            transition: background 160ms;
+        }
+        .demo-popup .preset:hover { background: #2a2a2a; }
+        .demo-popup .preset[aria-pressed="true"] { background: #fff; color: #000; }
+
+        .demo-popup .eq-presets {
+            display: flex; flex-wrap: wrap; gap: 6px;
+            max-height: 136px; overflow-y: auto;
+            scrollbar-width: thin; scrollbar-color: #303030 transparent;
+            padding-right: 4px;
+        }
+        .demo-popup .eq-preset {
+            all: unset;
+            padding: 6px 12px;
+            background: #272727; border-radius: 9999px;
+            font-size: 11px; font-weight: 500; color: #fff;
+            cursor: pointer; transition: background 160ms;
+        }
+        .demo-popup .eq-preset:hover { background: #2a2a2a; }
+        .demo-popup .eq-preset[aria-pressed="true"] { background: #ff0033; color: #fff; }
+
+        .demo-popup .media-timeline { display: flex; align-items: center; gap: 8px; margin-top: 8px; margin-bottom: 2px; font-size: 11px; color: #909090; font-family: 'Roboto Mono', monospace; user-select: none; }
+        .demo-popup .media-progress-slider { flex: 1; -webkit-appearance: none; height: 4px; background: #3a3a3a; border-radius: 2px; outline: none; cursor: pointer; }
+        .demo-popup .media-progress-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #fff; cursor: pointer; box-shadow: 0 0 4px rgba(0,0,0,0.5); transition: transform 100ms, background 100ms; }
+        .demo-popup .media-progress-slider:hover::-webkit-slider-thumb { background: #ff0033; transform: scale(1.2); }
+
+        .demo-popup .media-controls { display: flex; justify-content: center; gap: 16px; margin-top: 4px; }
+        .demo-popup .btn--media {
+            all: unset; display: flex; align-items: center; justify-content: center;
+            width: 40px; height: 40px; border-radius: 50%;
+            background: #272727; color: #fff; cursor: pointer;
+            transition: background 160ms, transform 160ms;
+        }
+        .demo-popup .btn--media:hover { background: #2a2a2a; transform: scale(1.05); }
+        .demo-popup .btn--media:active { transform: scale(0.95); }
+
+        .demo-popup .control { display: flex; flex-direction: column; gap: 10px; }
+        .demo-popup .control--inline { flex-direction: row; align-items: center; }
+        .demo-popup .control__row { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; }
+        .demo-popup .control__row label { color: #fff; }
+        .demo-popup .control__row output { color: #aaa; font-size: 11px; font-variant-numeric: tabular-nums; }
+        .demo-popup .control__scale { display: flex; justify-content: space-between; font-size: 10px; color: #717171; }
+        .demo-popup .checkbox { display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; user-select: none; }
+        .demo-popup .checkbox input { accent-color: #ff0033; width: 14px; height: 14px; cursor: pointer; }
+
+        .demo-popup input[type="range"] {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; height: 4px;
+            background: #303030; border-radius: 999px; outline: none; cursor: pointer;
+        }
+        .demo-popup input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 14px; height: 14px;
+            background: #ff0033; border-radius: 50%;
+            transition: transform 160ms, box-shadow 160ms;
+        }
+        .demo-popup input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 0 6px rgba(255, 0, 51, 0.18);
+        }
+        .demo-popup input[type="range"]:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .demo-popup .accordion {
+            all: unset;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 14px;
+            background: #212121; border-radius: 12px;
+            font-size: 13px; font-weight: 500;
+            cursor: pointer; width: 100%; box-sizing: border-box;
+            transition: background 160ms;
+        }
+        .demo-popup .accordion:hover { background: #2a2a2a; }
+        .demo-popup .accordion[aria-expanded="true"] svg { transform: rotate(180deg); }
+        .demo-popup .accordion svg { transition: transform 160ms; }
+
+        .demo-popup .advanced {
+            display: flex; flex-direction: column; gap: 16px;
+            padding: 14px;
+            background: #212121; border-radius: 12px; margin-top: 8px;
+        }
+        .demo-popup .advanced[hidden] { display: none; }
+
+        .demo-popup .meter {
+            display: grid; grid-template-columns: 80px 1fr 56px;
+            align-items: center; gap: 8px; font-size: 11px;
+        }
+        .demo-popup .meter__label { color: #aaa; }
+        .demo-popup .meter__bar { height: 6px; background: #2a2a2a; border-radius: 999px; overflow: hidden; }
+        .demo-popup .meter__fill { height: 100%; width: 0%; background: #ff0033; transition: width 80ms linear; }
+        .demo-popup .meter__fill--danger { background: #ffb300; }
+        .demo-popup .meter__bar--bipolar { position: relative; background: #2a2a2a; }
+        .demo-popup .meter__bar--bipolar::before {
+            content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px;
+            width: 1px; background: #717171; opacity: 0.4;
+        }
+        .demo-popup .meter__fill--boost { position: absolute; top: 0; left: 50%; height: 100%; background: #ff0033; transition: width 120ms linear; }
+        .demo-popup .meter__fill--cut   { position: absolute; top: 0; right: 50%; height: 100%; background: #ffb300; transition: width 120ms linear; }
+        .demo-popup .meter output { font-variant-numeric: tabular-nums; color: #aaa; text-align: right; }
+
+        .demo-popup .divider { border: 0; border-top: 1px solid #303030; margin: 4px 0; }
+
+        .demo-popup .footer {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px; border-top: 1px solid #303030;
+            position: sticky; bottom: 0; background: #0f0f0f;
+        }
+        .demo-popup .footer__version { font-size: 10px; color: #717171; }
+        .demo-popup .btn { all: unset; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 500; cursor: pointer; transition: background 160ms; }
+        .demo-popup .btn--ghost { color: #aaa; }
+        .demo-popup .btn--ghost:hover { background: #2a2a2a; color: #fff; }
+
+        .demo-popup .app.is-disabled .section:not(:first-child),
+        .demo-popup .app.is-disabled .footer { opacity: 0.5; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <a class="nav-brand" href="#">
+            <img src="icons/icon.svg" alt="K-ROOM" class="nav-logo">
+            <span>K-ROOM</span>
+        </a>
+        <div class="nav-links">
+            <a href="#features" class="nav-link" data-i18n="navFeatures">Features</a>
+            <a href="#presets" class="nav-link" data-i18n="navPresets">Presets</a>
+            <a href="https://github.com/adeondev/k-room-yt-music" class="nav-link" target="_blank">GitHub</a>
+        </div>
+        <div class="nav-actions">
+            <button class="lang-toggle" id="langToggle">PT</button>
+            <a href="https://github.com/adeondev/k-room-yt-music/releases/" target="_blank" class="btn-nav-install">
+                <svg viewBox="0 0 24 24" class="icon-sm"><path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                <span data-i18n="install">Install</span>
+            </a>
+        </div>
+    </nav>
+
+    <main>
+
+        <section class="hero">
+            <div class="hero-glow"></div>
+            <div class="hero-inner">
+                <div class="hero-headline">
+                    <img src="icons/icon.svg" alt="K-ROOM" class="hero-logo">
+                    <h1>K-ROOM</h1>
+                    <div class="hero-bars" aria-hidden="true">
+                        <span></span><span></span><span></span><span></span>
+                        <span></span><span></span><span></span><span></span>
+                    </div>
+                </div>
+                <p class="hero-sub" data-i18n="heroSub">Real-time audio compressor &amp; limiter for YouTube Music. Consistent volume. Zero distortion.</p>
+                <div class="hero-cta">
+                    <a href="https://github.com/adeondev/k-room-yt-music/releases/" target="_blank" class="btn-primary">
+                        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                        <span data-i18n="getStarted">Install Extension</span>
+                    </a>
+                    <button class="btn-ghost" id="btn-demo" data-i18n="takeALook">Take a Look</button>
+                    <a href="https://github.com/adeondev/k-room-yt-music" target="_blank" class="btn-ghost" data-i18n="viewSource">View Source</a>
+                </div>
+            </div>
+        </section>
+
+        <div class="stats-strip">
+            <div class="stat"><strong>v1.1.0</strong><span data-i18n="statVersion">Latest</span></div>
+            <div class="stat-sep"></div>
+            <div class="stat"><strong>Chrome</strong><span data-i18n="statBrowser">Browser</span></div>
+            <div class="stat-sep"></div>
+            <div class="stat"><strong>0 ms</strong><span data-i18n="statLatency">Added Latency</span></div>
+            <div class="stat-sep"></div>
+            <div class="stat"><strong>MIT</strong><span data-i18n="statLicense">License</span></div>
+        </div>
+
+        <section class="section" id="features">
+            <div class="section-inner">
+                <h2 class="section-title" data-i18n="topFeatures">Top Features</h2>
+                <div class="cards-grid">
+                    <div class="card">
+                        <div class="card-icon card-icon-red">
+                            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M3,9H7V15H3V9M10,5H14V19H10V5M17,11H21V13H17V11Z"/></svg>
+                        </div>
+                        <h3 data-i18n="feat1Title">Compressor &amp; Limiter</h3>
+                        <p data-i18n="feat1Desc">Controls track dynamics to prevent clipping and balance volume.</p>
+                        <span class="card-tag" data-i18n="feat1Tag">Core Engine</span>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon card-icon-blue">
+                            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z"/></svg>
+                        </div>
+                        <h3 data-i18n="feat2Title">Auto-Gain</h3>
+                        <p data-i18n="feat2Desc">Equalizes perceived loudness across different tracks automatically.</p>
+                        <span class="card-tag" data-i18n="feat2Tag">Volume Stability</span>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon card-icon-purple">
+                            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L6.5,12L7.91,10.59L11,13.67L16.59,8.09L18,9.5L11,16.5"/></svg>
+                        </div>
+                        <h3 data-i18n="feat3Title">Smart Detection</h3>
+                        <p data-i18n="feat3Desc">Detects if a song is too compressed or too dynamic on the fly.</p>
+                        <span class="card-tag" data-i18n="feat3Tag">Adaptive Audio</span>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon card-icon-green">
+                            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M16,9V7H12V12.5C11.58,12.19 11.07,12 10.5,12A2.5,2.5 0 0,0 8,14.5A2.5,2.5 0 0,0 10.5,17A2.5,2.5 0 0,0 13,14.5V9H16M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z"/></svg>
+                        </div>
+                        <h3 data-i18n="feat4Title">EQ &amp; Highpass</h3>
+                        <p data-i18n="feat4Desc">16 EQ presets and a highpass filter to remove sub-bass rumble.</p>
+                        <span class="card-tag" data-i18n="feat4Tag">Frequency Control</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section section-alt" id="presets">
+            <div class="section-inner">
+                <h2 class="section-title" data-i18n="presets">Recommended Presets</h2>
+                <div class="presets-grid">
+                    <div class="preset-card">
+                        <div class="preset-cover preset-smart">
+                            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L6.5,12L7.91,10.59L11,13.67L16.59,8.09L18,9.5L11,16.5"/></svg>
+                        </div>
+                        <h3 data-i18n="preSmart">Smart Mode</h3>
+                        <p data-i18n="preSmartDesc">Real-time dynamic adjustment</p>
+                    </div>
+                    <div class="preset-card">
+                        <div class="preset-cover preset-night">
+                            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M17.75,4.09L15.22,6.03L16.13,9.09L13.5,7.28L10.87,9.09L11.78,6.03L9.25,4.09L12.44,4L13.5,1L14.56,4L17.75,4.09M21.25,11L19.61,12.25L20.2,14.23L18.5,13.06L16.8,14.23L17.39,12.25L15.75,11L17.81,10.95L18.5,9L19.19,10.95L21.25,11M18.97,15.95C19.8,15.87 20.69,17.05 20.16,17.8C19.84,18.25 19.5,18.67 19.08,19.07C15.17,23 8.84,23 4.94,19.07C1.03,15.17 1.03,8.83 4.94,4.93C5.34,4.53 5.76,4.17 6.21,3.85C6.96,3.32 8.14,4.21 8.06,5.04C7.79,7.9 8.75,10.87 10.95,13.06C13.14,15.26 16.1,16.22 18.97,15.95Z"/></svg>
+                        </div>
+                        <h3 data-i18n="preNight">Night Mode</h3>
+                        <p data-i18n="preNightDesc">Boosts quiet parts, contains peaks</p>
+                    </div>
+                    <div class="preset-card">
+                        <div class="preset-cover preset-gentle">
+                            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M16,9V7H12V12.5C11.58,12.19 11.07,12 10.5,12A2.5,2.5 0 0,0 8,14.5A2.5,2.5 0 0,0 10.5,17A2.5,2.5 0 0,0 13,14.5V9H16M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z"/></svg>
+                        </div>
+                        <h3 data-i18n="preGentle">Gentle</h3>
+                        <p data-i18n="preGentleDesc">Preserves dynamics, subtle leveling</p>
+                    </div>
+                    <div class="preset-card">
+                        <div class="preset-cover preset-strong">
+                            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M13.5,21L12,17L10.5,21H13.5M12,2L5,6V11C5,16.5 8,21.5 12,23C16,21.5 19,16.5 19,11V6L12,2M12,4.2L17,6.8V11C17,15.5 14.8,19.6 12,20.8C9.2,19.6 7,15.5 7,11V6.8L12,4.2M12,7L10.5,11H13.5L12,7Z"/></svg>
+                        </div>
+                        <h3 data-i18n="preStrong">Strong</h3>
+                        <p data-i18n="preStrongDesc">Firm leveling for large variations</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-inner">
+                <h2 class="section-title" data-i18n="howToInstall">How to Install</h2>
+                <div class="steps-grid">
+                    <div class="step">
+                        <div class="step-num">1</div>
+                        <div class="step-body">
+                            <h3 data-i18n="step1Title">Download</h3>
+                            <p data-i18n="step1Desc">Download the latest .zip from GitHub Releases.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">2</div>
+                        <div class="step-body">
+                            <h3 data-i18n="step2Title">Load Unpacked</h3>
+                            <p data-i18n="step2Desc">In Chrome, go to Extensions, enable Developer Mode, then click Load unpacked.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">3</div>
+                        <div class="step-body">
+                            <h3 data-i18n="step3Title">Play Music</h3>
+                            <p data-i18n="step3Desc">Open YouTube Music and click the K-ROOM icon in the player bar.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <img src="icons/icon.svg" alt="K-ROOM" class="footer-logo">
+                <span>K-ROOM</span>
+            </div>
+            <div class="footer-links">
+                <a href="https://github.com/adeondev/k-room-yt-music" target="_blank">GitHub</a>
+                <a href="https://github.com/adeondev/k-room-yt-music/releases/" target="_blank" data-i18n="install">Install</a>
+                <a href="https://github.com/adeondev/k-room-yt-music/issues" target="_blank" data-i18n="footerIssues">Report a Bug</a>
+            </div>
+            <span class="footer-copy">v1.1.0 · MIT License · adeondev</span>
+        </div>
+    </footer>
+
+    <!-- ─── DEMO MODAL ─── -->
+    <div class="demo-overlay" id="demoOverlay">
+        <div class="demo-wrap">
+            <button class="demo-close-btn" id="demoClose" aria-label="Close">×</button>
+            <div class="demo-popup">
+                <main class="app" id="demoApp">
+                    <header class="header">
+                        <div class="header__title">
+                            <div class="header__logo"></div>
+                        </div>
+                        <div class="header__actions">
+                            <label class="switch">
+                                <input type="checkbox" id="dp-enabled" checked>
+                                <span class="switch__slider"></span>
+                            </label>
+                        </div>
+                    </header>
+
+                    <section class="section">
+                        <h2 class="section__title">Preset</h2>
+                        <div class="presets" id="dp-presets"></div>
+                        <p class="section__hint" id="dp-hint"></p>
+                    </section>
+
+                    <section class="section">
+                        <h2 class="section__title">Sound</h2>
+                        <div class="eq-presets" id="dp-eq-presets"></div>
+                    </section>
+
+                    <section class="section">
+                        <h2 class="section__title">Media Controls</h2>
+                        <div class="media-timeline">
+                            <span id="dp-media-time-current">1:15</span>
+                            <input type="range" id="dp-media-progress" class="media-progress-slider" min="0" max="100" value="30" step="0.1">
+                            <span id="dp-media-time-remaining">-3:05</span>
+                        </div>
+                        <div class="media-controls">
+                            <button id="dp-media-prev" class="btn--media" aria-label="Previous">
+                                <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M6,18V6H8V18H6M9.5,12L18,6V18L9.5,12Z"/></svg>
+                            </button>
+                            <button id="dp-media-play-pause" class="btn--media" aria-label="Play / Pause">
+                                <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M3,5V19L11,12M13,19H16V5H13M18,5V19H21V5"/></svg>
+                            </button>
+                            <button id="dp-media-next" class="btn--media" aria-label="Next">
+                                <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M16,18H18V6H16M6,18L14.5,12L6,6V18Z"/></svg>
+                            </button>
+                        </div>
+                    </section>
+
+                    <section class="section">
+                        <h2 class="section__title">Track Leveling</h2>
+                        <div class="control control--inline">
+                            <label class="checkbox">
+                                <input type="checkbox" id="dp-ag-enabled" checked>
+                                <span>Match average volume across tracks</span>
+                            </label>
+                        </div>
+                        <div class="control">
+                            <div class="control__row">
+                                <label>Target Volume</label>
+                                <output id="dp-ag-target-out">-20.0 dB</output>
+                            </div>
+                            <input type="range" id="dp-ag-target" min="-30" max="-6" step="0.5" value="-20">
+                            <div class="control__scale"><span>Lower</span><span>Higher</span></div>
+                        </div>
+                    </section>
+
+                    <section class="section">
+                        <h2 class="section__title">Quick Controls</h2>
+                        <div class="control">
+                            <div class="control__row">
+                                <label>Stability</label>
+                                <output id="dp-ratio-out">2.5 : 1</output>
+                            </div>
+                            <input type="range" id="dp-ratio" min="1" max="20" step="0.5" value="2.5">
+                            <div class="control__scale"><span>Dynamic</span><span>Stable</span></div>
+                        </div>
+                        <div class="control">
+                            <div class="control__row">
+                                <label>Makeup Gain</label>
+                                <output id="dp-makeup-out">1.00×</output>
+                            </div>
+                            <input type="range" id="dp-makeup" min="0" max="2" step="0.05" value="1">
+                            <div class="control__scale"><span>Original</span><span>Louder</span></div>
+                        </div>
+                    </section>
+
+                    <section class="section">
+                        <button class="accordion" id="dp-adv-btn" aria-expanded="false">
+                            <span>Advanced</span>
+                            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                                <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <div class="advanced" id="dp-advanced" hidden>
+                            <div class="control">
+                                <div class="control__row">
+                                    <label>Threshold (dB)</label>
+                                    <output id="dp-threshold-out">-20.0 dB</output>
+                                </div>
+                                <input type="range" id="dp-threshold" min="-60" max="0" step="0.5" value="-20">
+                            </div>
+                            <div class="control">
+                                <div class="control__row">
+                                    <label>Knee</label>
+                                    <output id="dp-knee-out">6.0</output>
+                                </div>
+                                <input type="range" id="dp-knee" min="0" max="40" step="0.5" value="6">
+                            </div>
+                            <div class="control">
+                                <div class="control__row">
+                                    <label>Attack (ms)</label>
+                                    <output id="dp-attack-out">15 ms</output>
+                                </div>
+                                <input type="range" id="dp-attack" min="0" max="500" step="1" value="15">
+                            </div>
+                            <div class="control">
+                                <div class="control__row">
+                                    <label>Release (ms)</label>
+                                    <output id="dp-release-out">250 ms</output>
+                                </div>
+                                <input type="range" id="dp-release" min="0" max="2000" step="10" value="250">
+                            </div>
+                            <div class="control">
+                                <div class="control__row">
+                                    <label>Limiter Ceiling (dB)</label>
+                                    <output id="dp-lim-out">-1.0 dB</output>
+                                </div>
+                                <input type="range" id="dp-lim" min="-6" max="0" step="0.1" value="-1">
+                            </div>
+                            <div class="control control--inline">
+                                <label class="checkbox">
+                                    <input type="checkbox" id="dp-lim-enabled" checked>
+                                    <span>Safety limiter (recommended)</span>
+                                </label>
+                            </div>
+                            <div class="control control--inline">
+                                <label class="checkbox">
+                                    <input type="checkbox" id="dp-hp-enabled" checked>
+                                    <span>Sub-bass filter (removes noise &lt; 30 Hz)</span>
+                                </label>
+                            </div>
+                            <div class="control">
+                                <div class="control__row">
+                                    <label>Highpass Cutoff (Hz)</label>
+                                    <output id="dp-hp-out">30 Hz</output>
+                                </div>
+                                <input type="range" id="dp-hp" min="20" max="200" step="1" value="30">
+                            </div>
+                            <hr class="divider">
+                            <div class="control">
+                                <div class="control__row">
+                                    <label>Max boost for quiet tracks (dB)</label>
+                                    <output id="dp-boost-out">+6.0 dB</output>
+                                </div>
+                                <input type="range" id="dp-boost" min="0" max="24" step="0.5" value="6">
+                            </div>
+                            <div class="control">
+                                <div class="control__row">
+                                    <label>Max cut for loud tracks (dB)</label>
+                                    <output id="dp-cut-out">−6.0 dB</output>
+                                </div>
+                                <input type="range" id="dp-cut" min="0" max="24" step="0.5" value="6">
+                            </div>
+                            <div class="control">
+                                <div class="control__row">
+                                    <label>Response Time (ms)</label>
+                                    <output id="dp-response-out">800 ms</output>
+                                </div>
+                                <input type="range" id="dp-response" min="100" max="3000" step="50" value="800">
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="section">
+                        <h2 class="section__title">Meters</h2>
+                        <div class="meter">
+                            <span class="meter__label">Auto-Gain</span>
+                            <div class="meter__bar meter__bar--bipolar">
+                                <div class="meter__fill meter__fill--boost"></div>
+                                <div class="meter__fill meter__fill--cut"></div>
+                            </div>
+                            <output>0.0 dB</output>
+                        </div>
+                        <div class="meter">
+                            <span class="meter__label">Compressor</span>
+                            <div class="meter__bar">
+                                <div class="meter__fill"></div>
+                            </div>
+                            <output>0.0 dB</output>
+                        </div>
+                        <div class="meter">
+                            <span class="meter__label">Limiter</span>
+                            <div class="meter__bar">
+                                <div class="meter__fill meter__fill--danger"></div>
+                            </div>
+                            <output>0.0 dB</output>
+                        </div>
+                    </section>
+
+                    <footer class="footer">
+                        <button class="btn btn--ghost" id="dp-reset">Restore Defaults</button>
+                        <span class="footer__version">v1.1.0</span>
+                    </footer>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ─── i18n ─── */
+        const T = {
+            en: {
+                navFeatures: 'Features', navPresets: 'Presets', install: 'Install',
+                heroSub: 'Real-time audio compressor & limiter for YouTube Music. Consistent volume. Zero distortion.',
+                getStarted: 'Install Extension', viewSource: 'View Source', takeALook: 'Take a Look',
+                statVersion: 'Latest', statBrowser: 'Browser', statLatency: 'Added Latency', statLicense: 'License',
+                topFeatures: 'Top Features',
+                feat1Title: 'Compressor & Limiter', feat1Desc: 'Controls track dynamics to prevent clipping and balance volume.', feat1Tag: 'Core Engine',
+                feat2Title: 'Auto-Gain', feat2Desc: 'Equalizes perceived loudness across different tracks automatically.', feat2Tag: 'Volume Stability',
+                feat3Title: 'Smart Detection', feat3Desc: 'Detects if a song is too compressed or too dynamic on the fly.', feat3Tag: 'Adaptive Audio',
+                feat4Title: 'EQ & Highpass', feat4Desc: '16 EQ presets and a highpass filter to remove sub-bass rumble.', feat4Tag: 'Frequency Control',
+                presets: 'Recommended Presets',
+                preSmart: 'Smart Mode', preSmartDesc: 'Real-time dynamic adjustment',
+                preNight: 'Night Mode', preNightDesc: 'Boosts quiet parts, contains peaks',
+                preGentle: 'Gentle', preGentleDesc: 'Preserves dynamics, subtle leveling',
+                preStrong: 'Strong', preStrongDesc: 'Firm leveling for large variations',
+                howToInstall: 'How to Install',
+                step1Title: 'Download', step1Desc: 'Download the latest .zip from GitHub Releases.',
+                step2Title: 'Load Unpacked', step2Desc: 'In Chrome, go to Extensions, enable Developer Mode, then click Load unpacked.',
+                step3Title: 'Play Music', step3Desc: 'Open YouTube Music and click the K-ROOM icon in the player bar.',
+                footerIssues: 'Report a Bug'
+            },
+            pt: {
+                navFeatures: 'Recursos', navPresets: 'Presets', install: 'Instalar',
+                heroSub: 'Compressor e limiter de áudio em tempo real para YouTube Music. Volume consistente. Zero distorção.',
+                getStarted: 'Instalar Extensão', viewSource: 'Ver Código', takeALook: 'Ver Demo',
+                statVersion: 'Versão', statBrowser: 'Navegador', statLatency: 'Latência adicionada', statLicense: 'Licença',
+                topFeatures: 'Principais Recursos',
+                feat1Title: 'Compressor & Limiter', feat1Desc: 'Controla a dinâmica para evitar distorção e equilibrar o volume.', feat1Tag: 'Motor Principal',
+                feat2Title: 'Auto-Ganho', feat2Desc: 'Equaliza a altura percebida entre diferentes faixas automaticamente.', feat2Tag: 'Estabilidade de Volume',
+                feat3Title: 'Detecção Inteligente', feat3Desc: 'Detecta se a música está muito comprimida ou muito dinâmica em tempo real.', feat3Tag: 'Áudio Adaptativo',
+                feat4Title: 'EQ & Passa-Alta', feat4Desc: '16 presets de EQ e filtro passa-alta para remover graves indesejados.', feat4Tag: 'Controle de Frequência',
+                presets: 'Presets Recomendados',
+                preSmart: 'Modo Inteligente', preSmartDesc: 'Ajuste dinâmico em tempo real',
+                preNight: 'Modo Noturno', preNightDesc: 'Aumenta partes baixas, contém picos',
+                preGentle: 'Suave', preGentleDesc: 'Preserva dinâmica, nivelamento sutil',
+                preStrong: 'Forte', preStrongDesc: 'Nivelamento firme para grandes variações',
+                howToInstall: 'Como Instalar',
+                step1Title: 'Baixar', step1Desc: 'Baixe o .zip mais recente no GitHub Releases.',
+                step2Title: 'Carregar Extensão', step2Desc: 'No Chrome, vá em Extensões, ative o Modo Desenvolvedor e clique em Carregar sem compactação.',
+                step3Title: 'Tocar Música', step3Desc: 'Abra o YouTube Music e clique no ícone K-ROOM na barra do player.',
+                footerIssues: 'Reportar um Bug'
+            }
+        };
+
+        let lang = 'en';
+        const langBtn = document.getElementById('langToggle');
+
+        function applyLang() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const v = T[lang][el.getAttribute('data-i18n')];
+                if (v !== undefined) el.textContent = v;
+            });
+            langBtn.textContent = lang === 'en' ? 'PT' : 'EN';
+            document.documentElement.lang = lang;
+        }
+
+        langBtn.addEventListener('click', () => { lang = lang === 'en' ? 'pt' : 'en'; applyLang(); });
+
+        /* ─── DEMO POPUP ─── */
+        const DEMO_PRESETS = [
+            { id: 'default', label: 'Default',    desc: 'Levels volume across tracks and stabilizes dynamics. Zero distortion.',          ratio: 2.5, makeup: 1.0, target: -20, threshold: -20, knee: 6,  attack: 15, release: 250, lim: -1,   hp: 30, boost: 6,  cut: 6,  response: 800  },
+            { id: 'smart',   label: 'Smart',      desc: 'Detects each track\'s profile and adjusts compression in real time.',            ratio: 3.5, makeup: 1.0, target: -19, threshold: -20, knee: 8,  attack: 6,  release: 200, lim: -1,   hp: 30, boost: 14, cut: 12, response: 900  },
+            { id: 'gentle',  label: 'Gentle',     desc: 'Preserves dynamics with subtle leveling between tracks.',                        ratio: 2,   makeup: 1.0, target: -16, threshold: -12, knee: 10, attack: 20, release: 300, lim: -1,   hp: 25, boost: 6,  cut: 3,  response: 800  },
+            { id: 'strong',  label: 'Strong',     desc: 'Firm leveling for tracks with large volume variations.',                         ratio: 4,   makeup: 1.0, target: -19, threshold: -22, knee: 6,  attack: 6,  release: 180, lim: -1,   hp: 30, boost: 10, cut: 9,  response: 1200 },
+            { id: 'night',   label: 'Night Mode', desc: 'Boosts quiet parts and contains peaks. Ideal for listening at night.',           ratio: 8,   makeup: 1.0, target: -20, threshold: -30, knee: 10, attack: 3,  release: 250, lim: -1.5, hp: 40, boost: 18, cut: 12, response: 500  },
+            { id: 'off',     label: 'Off',        desc: 'Original audio with no processing.',                                             ratio: 1,   makeup: 1.0, target: -18, threshold: 0,   knee: 0,  attack: 3,  release: 250, lim: 0,    hp: 20, boost: 12, cut: 6,  response: 500  }
+        ];
+
+        const DEMO_EQ = [
+            { id: 'flat',        label: 'Flat'           },
+            { id: 'bass',        label: 'Bass'           },
+            { id: 'bassReduce',  label: 'Less Bass'      },
+            { id: 'treble',      label: 'Treble'         },
+            { id: 'trebleReduce',label: 'Less Treble'    },
+            { id: 'vocal',       label: 'Vocal'          },
+            { id: 'loudness',    label: 'Loudness'       },
+            { id: 'pop',         label: 'Pop'            },
+            { id: 'rock',        label: 'Rock'           },
+            { id: 'electronic',  label: 'Electronic'     },
+            { id: 'hiphop',      label: 'Hip-Hop'        },
+            { id: 'jazz',        label: 'Jazz'           },
+            { id: 'classical',   label: 'Classical'      },
+            { id: 'acoustic',    label: 'Acoustic'       },
+            { id: 'deep',        label: 'Deep'           },
+            { id: 'smallSpk',    label: 'Small Speakers' },
+            { id: 'spoken',      label: 'Spoken Word'    }
+        ];
+
+        let demoActivePreset = 'default';
+        let demoActiveEq = 'flat';
+        let demoInited = false;
+
+        function demoFmt(type, v) {
+            v = parseFloat(v);
+            if (type === 'ratio')    return v.toFixed(1) + ' : 1';
+            if (type === 'makeup')   return v.toFixed(2) + '×';
+            if (type === 'db')       return v.toFixed(1) + ' dB';
+            if (type === 'knee')     return v.toFixed(1);
+            if (type === 'ms')       return Math.round(v) + ' ms';
+            if (type === 'hz')       return Math.round(v) + ' Hz';
+            if (type === 'boost')    return '+' + v.toFixed(1) + ' dB';
+            if (type === 'cut')      return '−' + v.toFixed(1) + ' dB';
+            return v;
+        }
+
+        function demoSetSlider(elId, outId, value, type) {
+            const el  = document.getElementById(elId);
+            const out = document.getElementById(outId);
+            if (el)  el.value = value;
+            if (out) out.textContent = demoFmt(type, value);
+        }
+
+        function demoApplyPreset(id) {
+            const p = DEMO_PRESETS.find(x => x.id === id);
+            if (!p) return;
+            document.getElementById('dp-hint').textContent = p.desc;
+            demoSetSlider('dp-ratio',     'dp-ratio-out',     p.ratio,     'ratio');
+            demoSetSlider('dp-makeup',    'dp-makeup-out',    p.makeup,    'makeup');
+            demoSetSlider('dp-ag-target', 'dp-ag-target-out', p.target,    'db');
+            demoSetSlider('dp-threshold', 'dp-threshold-out', p.threshold, 'db');
+            demoSetSlider('dp-knee',      'dp-knee-out',      p.knee,      'knee');
+            demoSetSlider('dp-attack',    'dp-attack-out',    p.attack,    'ms');
+            demoSetSlider('dp-release',   'dp-release-out',   p.release,   'ms');
+            demoSetSlider('dp-lim',       'dp-lim-out',       p.lim,       'db');
+            demoSetSlider('dp-hp',        'dp-hp-out',        p.hp,        'hz');
+            demoSetSlider('dp-boost',     'dp-boost-out',     p.boost,     'boost');
+            demoSetSlider('dp-cut',       'dp-cut-out',       p.cut,       'cut');
+            demoSetSlider('dp-response',  'dp-response-out',  p.response,  'ms');
+        }
+
+        function demoSelectPreset(id) {
+            demoActivePreset = id;
+            document.querySelectorAll('#dp-presets .preset').forEach(b => {
+                b.setAttribute('aria-pressed', b.dataset.id === id ? 'true' : 'false');
+            });
+            demoApplyPreset(id);
+        }
+
+        function demoInit() {
+            // Render presets
+            const presetsEl = document.getElementById('dp-presets');
+            DEMO_PRESETS.forEach(p => {
+                const btn = document.createElement('button');
+                btn.className = 'preset';
+                btn.textContent = p.label;
+                btn.dataset.id = p.id;
+                btn.setAttribute('aria-pressed', p.id === demoActivePreset ? 'true' : 'false');
+                btn.addEventListener('click', () => demoSelectPreset(p.id));
+                presetsEl.appendChild(btn);
+            });
+
+            // Render EQ presets
+            const eqEl = document.getElementById('dp-eq-presets');
+            DEMO_EQ.forEach(eq => {
+                const btn = document.createElement('button');
+                btn.className = 'eq-preset';
+                btn.textContent = eq.label;
+                btn.dataset.id = eq.id;
+                btn.setAttribute('aria-pressed', eq.id === demoActiveEq ? 'true' : 'false');
+                btn.addEventListener('click', () => {
+                    demoActiveEq = eq.id;
+                    document.querySelectorAll('#dp-eq-presets .eq-preset').forEach(b => {
+                        b.setAttribute('aria-pressed', b.dataset.id === eq.id ? 'true' : 'false');
+                    });
+                });
+                eqEl.appendChild(btn);
+            });
+
+            // Live slider outputs
+            [
+                ['dp-ratio',     'dp-ratio-out',     'ratio'],
+                ['dp-makeup',    'dp-makeup-out',    'makeup'],
+                ['dp-ag-target', 'dp-ag-target-out', 'db'],
+                ['dp-threshold', 'dp-threshold-out', 'db'],
+                ['dp-knee',      'dp-knee-out',      'knee'],
+                ['dp-attack',    'dp-attack-out',    'ms'],
+                ['dp-release',   'dp-release-out',   'ms'],
+                ['dp-lim',       'dp-lim-out',       'db'],
+                ['dp-hp',        'dp-hp-out',        'hz'],
+                ['dp-boost',     'dp-boost-out',     'boost'],
+                ['dp-cut',       'dp-cut-out',       'cut'],
+                ['dp-response',  'dp-response-out',  'ms']
+            ].forEach(([elId, outId, type]) => {
+                const el  = document.getElementById(elId);
+                const out = document.getElementById(outId);
+                if (el && out) el.addEventListener('input', () => { out.textContent = demoFmt(type, el.value); });
+            });
+
+            // Media Controls dummy
+            const playSvg = '<path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"/>';
+            const pauseSvg = '<path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z"/>';
+            
+            ['dp-media-prev', 'dp-media-play-pause', 'dp-media-next'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('click', () => console.log('Action: ', id));
+            });
+
+            const demoProgress = document.getElementById('dp-media-progress');
+            if (demoProgress) {
+                const updateFill = () => {
+                    const val = parseFloat(demoProgress.value) || 0;
+                    const max = parseFloat(demoProgress.max) || 100;
+                    const p = max > 0 ? (val / max) * 100 : 0;
+                    demoProgress.style.background = `linear-gradient(to right, #ff0033 0%, #ff0033 ${p}%, #3a3a3a ${p}%, #3a3a3a 100%)`;
+                };
+                demoProgress.addEventListener('input', updateFill);
+                updateFill();
+            }
+
+            // Enable toggle
+            document.getElementById('dp-enabled').addEventListener('change', function () {
+                document.getElementById('demoApp').classList.toggle('is-disabled', !this.checked);
+            });
+
+            // Advanced accordion
+            document.getElementById('dp-adv-btn').addEventListener('click', function () {
+                const open = this.getAttribute('aria-expanded') === 'true';
+                this.setAttribute('aria-expanded', String(!open));
+                document.getElementById('dp-advanced').hidden = open;
+            });
+
+            // Reset
+            document.getElementById('dp-reset').addEventListener('click', () => demoSelectPreset('default'));
+
+            // Set initial values
+            demoApplyPreset('default');
+        }
+
+        // Open / close
+        const demoOverlay = document.getElementById('demoOverlay');
+
+        function demoOpen() {
+            if (!demoInited) { demoInit(); demoInited = true; }
+            demoOverlay.classList.add('is-open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function demoClose() {
+            demoOverlay.classList.remove('is-open');
+            document.body.style.overflow = '';
+        }
+
+        document.getElementById('btn-demo').addEventListener('click', demoOpen);
+        document.getElementById('demoClose').addEventListener('click', demoClose);
+        demoOverlay.addEventListener('click', e => { if (e.target === demoOverlay) demoClose(); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') demoClose(); });
+    </script>
+</body>
+</html>
