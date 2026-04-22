@@ -1,0 +1,176 @@
+================================================================================
+  K-ROOM YT Music Control — Changelog  /  Histórico de Alterações
+================================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [EN]  v1.1.0  (2026-04-22)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  AUDIO ENGINE — Bug Fixes
+  ────────────────────────
+  • Fixed extension randomly stopping during playback.
+    AudioContext could get stuck in 'suspended' state with no recovery path.
+    Now detects 5 consecutive suspended health-check ticks (~10s) while the
+    video is playing, forces teardown and reattaches automatically.
+
+  • Fixed volume jumping suddenly between tracks.
+    Three compounding root causes identified and fixed:
+      1. EMA (loudness average) was resetting after 600ms of silence — too short
+         for normal gaps between tracks. Threshold raised to 3000ms.
+      2. A fast-path block for large gain errors was speeding up gain changes
+         when they should be slow, making transitions audible as a jump.
+         Block removed entirely.
+      3. Track-change boost used an 80ms smoothing constant — fast enough to
+         hear as a jolt. Raised to 250ms for a natural fade.
+
+  • Fixed automation queue stacking on audio params.
+    Calling setTargetAtTime every 50ms without canceling previous events caused
+    undefined browser behavior. Replaced all param automation with _smoothParam()
+    which calls cancelAndHoldAtTime before scheduling new values.
+
+  • Fixed graph reconnection happening on every apply() call.
+    Was causing micro-glitches every time a slider was moved. Now cached via
+    _currentRoute — only reconnects when bypass/processing mode actually changes.
+
+  • Fixed reattach race condition.
+    context.close() is async but reattach was immediate. Added 50ms buffer on
+    all teardown → reattach paths to avoid attaching to a closing context.
+
+  • Added video 'play' event listener to trigger a health check immediately
+    when playback resumes, catching context issues before the 2s polling cycle.
+
+  AUDIO ENGINE — Improvements
+  ────────────────────────────
+  • Default response time reduced: 1500ms → 800ms. Faster, less noticeable lag.
+  • EMA blend on silence reset: blends 50/50 with the first new sample instead
+    of dropping the average entirely, for a smoother re-entry after silence.
+  • _teardown() now fully resets all transient state (_peakEnvelope,
+    _silenceTicks, _trackChangeBoost, _currentCrestDb, _currentAdaptiveRatio…).
+
+  LANDING PAGE — New  (index.html + style.css)
+  ─────────────────────────────────────────────
+  • Complete redesign with a modern dark aesthetic.
+  • Navbar: blur backdrop, brand logo, nav links, EN/PT language toggle,
+    Install button.
+  • Hero: animated EQ bars, gradient title, subtitle, CTA buttons
+    (Install Extension, Take a Look, View Source).
+  • Stats strip: version · browser · added latency · license.
+  • Features section: 4 cards with colored icons
+    (Compressor & Limiter, Auto-Gain, Smart Detection, EQ & Highpass).
+  • Presets section: 4 cards with hover glow (Smart, Night, Gentle, Strong).
+  • How to Install: 3-step guide with numbered circles.
+  • Footer: brand, links, version.
+  • Full EN/PT i18n via JS translation map + language toggle.
+  • Removed all borders/outlines from interactive elements.
+  • Removed card hover lift animations.
+
+  DEMO MODAL — New  ("Take a Look")
+  ────────────────────────────────────
+  • Interactive demo popup, accessible via "Take a Look" in the hero.
+  • Pixel-accurate replica of the real extension popup, fully in English.
+  • Interactive: preset selection (updates all sliders + hint text), EQ preset
+    selection, enable/disable toggle, Advanced accordion, live slider outputs,
+    media controls (Prev / Play-Pause / Next), Restore Defaults button.
+  • Closes via × button, backdrop click, or Escape key.
+  • All CSS scoped under .demo-popup to prevent page style conflicts.
+  • Lazy-initialized on first open — zero JS cost until the modal is opened.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [PT]  v1.1.0  (2026-04-22)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ENGINE DE ÁUDIO — Correções
+  ────────────────────────────
+  • Corrigido: extensão parando do nada durante a reprodução.
+    O AudioContext podia ficar preso no estado 'suspended' sem nenhuma
+    recuperação. Agora detecta 5 ticks consecutivos suspensos (~10s) enquanto
+    o vídeo está tocando, força o teardown e reconecta automaticamente.
+
+  • Corrigido: volume pulando entre músicas de forma abrupta.
+    Três causas raiz identificadas e corrigidas:
+      1. O EMA (média de loudness) resetava após 600ms de silêncio — curto
+         demais para pausas normais entre faixas. Limite elevado para 3000ms.
+      2. Um bloco de atalho para erros de gain grandes acelerava as mudanças
+         quando deveriam ser lentas, tornando as transições audíveis como pulo.
+         Bloco removido por completo.
+      3. O boost de troca de faixa usava constante de 80ms — rápido o
+         suficiente para ser percebido. Elevado para 250ms para um fade natural.
+
+  • Corrigido: acúmulo de automação na fila dos parâmetros de áudio.
+    Chamar setTargetAtTime a cada 50ms sem cancelar eventos anteriores causava
+    comportamento indefinido no browser. Toda automação substituída por
+    _smoothParam(), que chama cancelAndHoldAtTime antes de agendar novos valores.
+
+  • Corrigido: reconexão do grafo acontecendo em todo apply().
+    Causava micro-glitches toda vez que um slider era movido. Agora cacheado via
+    _currentRoute — só reconecta quando o modo bypass/processamento muda de fato.
+
+  • Corrigido: race condition no reattach.
+    context.close() é assíncrono mas o reattach era imediato. Adicionado buffer
+    de 50ms em todos os caminhos de teardown → reattach.
+
+  • Adicionado listener de evento 'play' no vídeo para disparar um health check
+    imediatamente ao retomar a reprodução, antes do ciclo de polling de 2s.
+
+  ENGINE DE ÁUDIO — Melhorias
+  ────────────────────────────
+  • Tempo de resposta padrão reduzido: 1500ms → 800ms. Mais rápido e menos
+    perceptível.
+  • Blend do EMA ao sair do silêncio: mistura 50/50 com a primeira amostra nova
+    em vez de zerar a média, para uma re-entrada mais suave.
+  • _teardown() agora reseta todo o estado transitório (_peakEnvelope,
+    _silenceTicks, _trackChangeBoost, _currentCrestDb, _currentAdaptiveRatio…).
+
+  LANDING PAGE — Nova  (index.html + style.css)
+  ───────────────────────────────────────────────
+  • Redesign completo com estética dark moderna.
+  • Navbar: blur no fundo, logo, links de navegação, toggle EN/PT,
+    botão Instalar.
+  • Hero: barras de EQ animadas, título com gradiente, subtítulo, botões CTA
+    (Instalar Extensão, Ver Demo, Ver Código).
+  • Stats strip: versão · navegador · latência adicionada · licença.
+  • Seção de recursos: 4 cards com ícones coloridos
+    (Compressor & Limiter, Auto-Ganho, Detecção Inteligente, EQ & Passa-Alta).
+  • Seção de presets: 4 cards com brilho no hover (Inteligente, Noturno,
+    Suave, Forte).
+  • Como Instalar: guia de 3 passos com círculos numerados.
+  • Rodapé: marca, links, versão.
+  • i18n completo EN/PT via mapa de traduções JS + botão de idioma.
+  • Removidas todas as bordas/outlines de elementos interativos.
+  • Removida animação de elevação no hover dos cards.
+
+  DEMO MODAL — Novo  ("Take a Look" / "Ver Demo")
+  ──────────────────────────────────────────────────
+  • Popup de demonstração interativo, acessível pelo botão no hero.
+  • Réplica fiel do popup real da extensão, totalmente em inglês.
+  • Interativo: seleção de preset (atualiza sliders + texto de dica), seleção
+    de preset de EQ, toggle de ativar/desativar, acordeão Avançado, outputs
+    ao vivo dos sliders, controles de mídia (Anterior / Play-Pause / Próximo),
+    botão Restaurar Padrões.
+  • Fecha via botão ×, clique no backdrop ou tecla Escape.
+  • Todo CSS escopado em .demo-popup para não conflitar com a página.
+  • Inicialização lazy na primeira abertura — sem custo de JS até abrir.
+
+
+════════════════════════════════════════════════════════════════════════════════
+
+  [EN]  v1.0.2  (2026-04-22)
+  ────────────────────────────
+  • Version bump. Internal stabilization pass.
+
+  [PT]  v1.0.2  (2026-04-22)
+  ────────────────────────────
+  • Bump de versão. Passagem de estabilização interna.
+
+════════════════════════════════════════════════════════════════════════════════
+
+  [EN]  v1.0.0 – v1.0.1  (initial releases)
+  ────────────────────────────────────────────
+  • Initial release with compressor, limiter, auto-gain, EQ presets,
+    highpass filter, and adaptive mode.
+
+  [PT]  v1.0.0 – v1.0.1  (lançamentos iniciais)
+  ────────────────────────────────────────────────
+  • Lançamento inicial com compressor, limiter, auto-ganho, presets de EQ,
+    filtro passa-alta e modo adaptativo.
