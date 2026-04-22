@@ -228,6 +228,20 @@ html, body {
     color: #ffffff;
 }
 
+.eq-graph-wrap {
+    margin-top: 10px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #141414;
+    border: 1px solid var(--border);
+}
+
+#eq-graph {
+    display: block;
+    width: 100%;
+    touch-action: none;
+}
+
 .control {
     display: flex;
     flex-direction: column;
@@ -501,6 +515,47 @@ input[type="range"]:disabled {
 }
 .btn--media:active {
     transform: scale(0.95);
+}
+
+.media-track-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 4px;
+    margin-bottom: 2px;
+}
+
+.media-track-info img {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: var(--bg-chip);
+    flex-shrink: 0;
+}
+
+.media-track-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.media-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.media-artist {
+    font-size: 11px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .media-timeline {

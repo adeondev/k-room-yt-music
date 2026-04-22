@@ -421,6 +421,15 @@
                         m.duration = v.duration;
                     }
                     m.scanPhase = engine.getScanPhase();
+                    m.metadata = { title: '', artist: '', artwork: '' };
+                    if ('mediaSession' in navigator && navigator.mediaSession.metadata) {
+                        const md = navigator.mediaSession.metadata;
+                        m.metadata.title = md.title || '';
+                        m.metadata.artist = md.artist || '';
+                        if (md.artwork && md.artwork.length > 0) {
+                            m.metadata.artwork = md.artwork[md.artwork.length - 1].src;
+                        }
+                    }
                     reply(m);
                     return false;
                 }

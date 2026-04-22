@@ -59,7 +59,11 @@
         mediaTimeCurrent: document.getElementById('media-time-current'),
         mediaTimeRemaining: document.getElementById('media-time-remaining'),
         mediaProgress: document.getElementById('media-progress'),
-        scanBadge: document.getElementById('scan-badge')
+        scanBadge: document.getElementById('scan-badge'),
+        mediaTrackInfo: document.getElementById('media-track-info'),
+        mediaArtwork: document.getElementById('media-artwork'),
+        mediaTitle: document.getElementById('media-title'),
+        mediaArtist: document.getElementById('media-artist')
     };
 
     let state = null;
@@ -69,6 +73,118 @@
     let currentLang = 'pt-BR';
     let i18nData = {};
     let isSeeking = false;
+
+    const EQ_GRAPH = (() => {
+        const BANDS = Presets.EQ_BANDS;
+        const LABELS = ['60', '250', '1K', '4K', '12K'];
+        const DB_MIN = -12, DB_MAX = 12, PR = 7;
+        const P = { l: 30, r: 10, t: 14, b: 22 };
+        let cv, cx, W, H, gains = [0,0,0,0,0], drag = -1, changeFn = null;
+
+        function ar() { return { x: P.l, y: P.t, w: W - P.l - P.r, h: H - P.t - P.b }; }
+        function fX(f) { const a = ar(); return a.x + (Math.log10(f) - Math.log10(BANDS[0])) / (Math.log10(BANDS[4]) - Math.log10(BANDS[0])) * a.w; }
+        function gY(db) { const a = ar(); return a.y + (DB_MAX - db) / (DB_MAX - DB_MIN) * a.h; }
+        function yG(y) { const a = ar(); return DB_MAX - (y - a.y) / a.h * (DB_MAX - DB_MIN); }
+        function pts() { return BANDS.map((f, i) => ({ x: fX(f), y: gY(gains[i]) })); }
+
+        function spline(ctx, all) {
+            ctx.moveTo(all[0].x, all[0].y);
+            for (let i = 0; i < all.length - 1; i++) {
+                const c0 = all[Math.max(0, i-1)], c1 = all[i], c2 = all[i+1], c3 = all[Math.min(all.length-1, i+2)];
+                ctx.bezierCurveTo(
+                    c1.x + (c2.x - c0.x) / 3, c1.y + (c2.y - c0.y) / 3,
+                    c2.x - (c3.x - c1.x) / 3, c2.y - (c3.y - c1.y) / 3,
+                    c2.x, c2.y
+                );
+            }
+        }
+
+        function draw() {
+            if (!cx) return;
+            cx.clearRect(0, 0, W, H);
+            const a = ar();
+            cx.fillStyle = '#141414'; cx.fillRect(0, 0, W, H);
+
+            [-12, -6, 0, 6, 12].forEach(db => {
+                const y = gY(db);
+                cx.beginPath(); cx.moveTo(a.x, y); cx.lineTo(a.x + a.w, y);
+                cx.strokeStyle = db === 0 ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.06)';
+                cx.lineWidth = 1; cx.stroke();
+            });
+            cx.strokeStyle = 'rgba(255,255,255,0.06)';
+            BANDS.forEach(f => { const x = fX(f); cx.beginPath(); cx.moveTo(x, a.y); cx.lineTo(x, a.y + a.h); cx.stroke(); });
+
+            cx.font = '9px system-ui,sans-serif'; cx.textAlign = 'right'; cx.textBaseline = 'middle';
+            [-12, -6, 6, 12].forEach(db => { cx.fillStyle = 'rgba(255,255,255,0.3)'; cx.fillText((db > 0 ? '+' : '') + db, a.x - 4, gY(db)); });
+            cx.fillStyle = 'rgba(255,255,255,0.5)'; cx.fillText('0', a.x - 4, gY(0));
+            cx.textAlign = 'center'; cx.textBaseline = 'top'; cx.fillStyle = 'rgba(255,255,255,0.3)';
+            BANDS.forEach((f, i) => cx.fillText(LABELS[i], fX(f), a.y + a.h + 6));
+
+            const p = pts();
+            const all = [{ x: a.x - 10, y: p[0].y }, ...p, { x: a.x + a.w + 10, y: p[4].y }];
+            const zY = gY(0);
+
+            cx.beginPath(); spline(cx, all);
+            cx.lineTo(a.x + a.w + 10, zY); cx.lineTo(a.x - 10, zY); cx.closePath();
+            const gr = cx.createLinearGradient(0, a.y, 0, a.y + a.h);
+            gr.addColorStop(0, 'rgba(255,0,51,0.18)'); gr.addColorStop(0.5, 'rgba(255,0,51,0.04)'); gr.addColorStop(1, 'rgba(255,0,51,0.18)');
+            cx.fillStyle = gr; cx.fill();
+
+            cx.beginPath(); spline(cx, all);
+            cx.strokeStyle = '#ff0033'; cx.lineWidth = 2; cx.stroke();
+
+            p.forEach((pt, i) => {
+                cx.beginPath(); cx.arc(pt.x, pt.y, PR, 0, Math.PI * 2);
+                cx.fillStyle = drag === i ? '#ff3366' : '#ff0033'; cx.fill();
+                cx.strokeStyle = '#fff'; cx.lineWidth = 2; cx.stroke();
+                if (drag === i) {
+                    cx.fillStyle = '#fff'; cx.font = 'bold 10px system-ui,sans-serif';
+                    cx.textAlign = 'center'; cx.textBaseline = 'bottom';
+                    cx.fillText((gains[i] >= 0 ? '+' : '') + gains[i].toFixed(1) + ' dB', pt.x, pt.y - PR - 4);
+                }
+            });
+        }
+
+        function hit(mx, my) {
+            const p = pts();
+            for (let i = 0; i < p.length; i++) { const dx = mx - p[i].x, dy = my - p[i].y; if (dx*dx + dy*dy <= (PR+5)*(PR+5)) return i; }
+            return -1;
+        }
+        function mpos(e) { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+        function clmp(y) { return Math.max(DB_MIN, Math.min(DB_MAX, Math.round(yG(y) * 2) / 2)); }
+
+        return {
+            get dragging() { return drag; },
+            set onChange(fn) { changeFn = fn; },
+            init() {
+                cv = document.getElementById('eq-graph');
+                if (!cv) return;
+                cx = cv.getContext('2d');
+                const dpr = window.devicePixelRatio || 1;
+                const rect = cv.parentElement.getBoundingClientRect();
+                W = Math.floor(rect.width); H = 140;
+                cv.width = W * dpr; cv.height = H * dpr;
+                cv.style.width = W + 'px'; cv.style.height = H + 'px';
+                cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+                cv.addEventListener('mousedown', e => { const p = mpos(e), h = hit(p.x, p.y); if (h >= 0) { drag = h; cv.style.cursor = 'grabbing'; draw(); } });
+                cv.addEventListener('mousemove', e => {
+                    const p = mpos(e);
+                    if (drag >= 0) { gains[drag] = clmp(p.y); draw(); if (changeFn) changeFn(gains); }
+                    else { cv.style.cursor = hit(p.x, p.y) >= 0 ? 'grab' : 'default'; }
+                });
+                const up = () => { if (drag >= 0) { drag = -1; cv.style.cursor = 'default'; draw(); } };
+                window.addEventListener('mouseup', up);
+                cv.addEventListener('touchstart', e => { e.preventDefault(); const p = mpos(e.touches[0]), h = hit(p.x, p.y); if (h >= 0) { drag = h; draw(); } }, { passive: false });
+                cv.addEventListener('touchmove', e => { e.preventDefault(); if (drag >= 0) { gains[drag] = clmp(mpos(e.touches[0]).y); draw(); if (changeFn) changeFn(gains); } }, { passive: false });
+                window.addEventListener('touchend', up);
+                draw();
+            },
+            setGains(g) { gains = g.map(v => Number(v) || 0); draw(); },
+            getGains() { return [...gains]; },
+            draw
+        };
+    })();
 
     function formatTime(s) {
         if (!isFinite(s) || isNaN(s)) return '0:00';
@@ -293,6 +409,17 @@
         } else {
             elements.presetDescription.textContent = i18nData.hintCustomPreset || 'Configuração personalizada.';
         }
+
+        if (EQ_GRAPH.dragging < 0) {
+            let eqGains;
+            if (state.eq && Array.isArray(state.eq.gains)) {
+                eqGains = state.eq.gains;
+            } else {
+                const p = Presets.EQ_PRESETS[(state.eq && state.eq.id) || 'flat'];
+                eqGains = p ? [...p.gains] : [0, 0, 0, 0, 0];
+            }
+            EQ_GRAPH.setGains(eqGains);
+        }
     }
 
     async function getActiveYtmTab() {
@@ -331,6 +458,12 @@
         configureRanges();
         renderPresets(Presets.DEFAULT_PRESET_ID);
         renderEqPresets();
+        EQ_GRAPH.init();
+        EQ_GRAPH.onChange = (gains) => {
+            state.eq = { id: 'custom', gains: [...gains] };
+            document.querySelectorAll('.eq-preset').forEach(b => b.setAttribute('aria-pressed', 'false'));
+            enqueuePersist();
+        };
         elements.versionLabel.textContent =
             'v' + (chrome.runtime.getManifest().version || '—');
 
@@ -528,7 +661,9 @@
 
     async function applyEqPreset(eqId) {
         if (!state) return;
-        state.eq = { id: eqId };
+        const preset = Presets.EQ_PRESETS[eqId];
+        const gains = preset ? [...preset.gains] : [0, 0, 0, 0, 0];
+        state.eq = { id: eqId, gains };
         renderFromState();
         enqueuePersist();
     }
@@ -542,6 +677,35 @@
             updateMeter(elements.meterLimiter, elements.meterLimiterValue, meters.limiter);
             updateBipolarMeter(meters.autoGainDb || 0);
             updateCrestMeter(meters.crestDb || 0, meters.adaptiveRatio || 0);
+            
+            if (meters.scanPhase !== undefined && elements.scanBadge) {
+                if (meters.scanPhase === 'scanning') {
+                    elements.scanBadge.className = 'scan-badge scan-badge--scanning';
+                    elements.scanBadge.textContent = i18nData.badgeScanning || '⏳ SCANNING';
+                } else if (meters.scanPhase === 'locked') {
+                    elements.scanBadge.className = 'scan-badge scan-badge--locked';
+                    elements.scanBadge.textContent = i18nData.badgeLocked || '🔒 LOCKED';
+                } else {
+                    elements.scanBadge.className = 'scan-badge scan-badge--hidden';
+                }
+            }
+
+            if (meters.metadata && elements.mediaTrackInfo) {
+                const { title, artist, artwork } = meters.metadata;
+                if (title || artist) {
+                    elements.mediaTrackInfo.style.display = 'flex';
+                    elements.mediaTitle.textContent = title || '';
+                    elements.mediaArtist.textContent = artist || '';
+                    if (artwork) {
+                        elements.mediaArtwork.src = artwork;
+                        elements.mediaArtwork.style.display = 'block';
+                    } else {
+                        elements.mediaArtwork.style.display = 'none';
+                    }
+                } else {
+                    elements.mediaTrackInfo.style.display = 'none';
+                }
+            }
             
             if (meters.currentTime !== undefined && meters.duration !== undefined &&
                 isFinite(meters.duration) && meters.duration > 0) {

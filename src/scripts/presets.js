@@ -11,9 +11,9 @@
             autoGain: {
                 enabled: true,
                 mode: 'scan',
-                targetDb: -20,
-                maxBoostDb: 8,
-                maxCutDb: 8,
+                targetDb: -24,
+                maxBoostDb: 3,
+                maxCutDb: 6,
                 responseMs: 800
             },
             compressor: {
@@ -315,7 +315,18 @@
         s.adaptive.minRatio = clamp(s.adaptive.minRatio, LIMITS.ratio);
         s.adaptive.maxRatio = clamp(s.adaptive.maxRatio, LIMITS.ratio);
 
-        if (!s.eq || !EQ_PRESETS[s.eq.id]) {
+        if (!s.eq) {
+            s.eq = { id: DEFAULT_EQ_ID };
+        } else if (s.eq.id === 'custom') {
+            if (!Array.isArray(s.eq.gains)) {
+                s.eq = { id: DEFAULT_EQ_ID };
+            } else {
+                s.eq.gains = s.eq.gains.slice(0, 5).map(g =>
+                    Math.min(12, Math.max(-12, Math.round((Number(g) || 0) * 2) / 2))
+                );
+                while (s.eq.gains.length < 5) s.eq.gains.push(0);
+            }
+        } else if (!EQ_PRESETS[s.eq.id]) {
             s.eq = { id: DEFAULT_EQ_ID };
         }
 

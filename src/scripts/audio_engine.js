@@ -308,10 +308,15 @@
 
         _applyEq(eq) {
             if (!this.nodes.eq) return;
-            const presets = root.YTMS && root.YTMS.Presets && root.YTMS.Presets.EQ_PRESETS;
-            const id = (eq && eq.id) ? eq.id : 'flat';
-            const preset = (presets && presets[id]) || (presets && presets.flat);
-            const gains = preset ? preset.gains : [0, 0, 0, 0, 0];
+            let gains;
+            if (eq && Array.isArray(eq.gains)) {
+                gains = eq.gains;
+            } else {
+                const presets = root.YTMS && root.YTMS.Presets && root.YTMS.Presets.EQ_PRESETS;
+                const id = (eq && eq.id) ? eq.id : 'flat';
+                const preset = (presets && presets[id]) || (presets && presets.flat);
+                gains = preset ? preset.gains : [0, 0, 0, 0, 0];
+            }
             for (let i = 0; i < this.nodes.eq.length; i++) {
                 const g = (i < gains.length) ? gains[i] : 0;
                 this._smoothParam(this.nodes.eq[i].gain, g, 0.05);
