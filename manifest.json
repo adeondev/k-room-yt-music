@@ -1,11 +1,16 @@
 {
     "manifest_version": 3,
     "name": "K-ROOM YT Music Control",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "description": "Stabilize YouTube Music volume with a professional compressor and limiter. Zero distortion.",
     "permissions": [
         "storage",
         "tabs"
+    ],
+    "host_permissions": [
+        "*://music.youtube.com/*",
+        "<all_urls>",
+        "file:///*"
     ],
     "commands": {
         "play-pause": {
@@ -45,6 +50,17 @@
                 "src/scripts/presets.js",
                 "src/scripts/audio_engine.js",
                 "src/scripts/content_script.js"
+            ],
+            "run_at": "document_idle",
+            "all_frames": false
+        },
+        {
+            "matches": [
+                "<all_urls>",
+                "file:///*"
+            ],
+            "js": [
+                "src/scripts/landing_bridge.js"
             ],
             "run_at": "document_idle",
             "all_frames": false

@@ -51,6 +51,9 @@
         autoGainCutOutput: document.getElementById('autogain-cut-output'),
         autoGainResponse: document.getElementById('autogain-response'),
         autoGainResponseOutput: document.getElementById('autogain-response-output'),
+        perceptualEnabled: document.getElementById('perceptual-enabled'),
+        perceptualAtten: document.getElementById('perceptual-atten'),
+        perceptualAttenOutput: document.getElementById('perceptual-atten-output'),
         reset: document.getElementById('reset-btn'),
         versionLabel: document.getElementById('version-label'),
         mediaPrev: document.getElementById('media-prev'),
@@ -127,16 +130,16 @@
             cx.beginPath(); spline(cx, all);
             cx.lineTo(a.x + a.w + 10, zY); cx.lineTo(a.x - 10, zY); cx.closePath();
             const gr = cx.createLinearGradient(0, a.y, 0, a.y + a.h);
-            gr.addColorStop(0, 'rgba(255,0,51,0.18)'); gr.addColorStop(0.5, 'rgba(255,0,51,0.04)'); gr.addColorStop(1, 'rgba(255,0,51,0.18)');
+            gr.addColorStop(0, 'rgba(255,255,255,0.18)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.04)'); gr.addColorStop(1, 'rgba(255,255,255,0.18)');
             cx.fillStyle = gr; cx.fill();
 
             cx.beginPath(); spline(cx, all);
-            cx.strokeStyle = '#ff0033'; cx.lineWidth = 2; cx.stroke();
+            cx.strokeStyle = '#ffffff'; cx.lineWidth = 2; cx.stroke();
 
             p.forEach((pt, i) => {
                 cx.beginPath(); cx.arc(pt.x, pt.y, PR, 0, Math.PI * 2);
-                cx.fillStyle = drag === i ? '#ff3366' : '#ff0033'; cx.fill();
-                cx.strokeStyle = '#fff'; cx.lineWidth = 2; cx.stroke();
+                cx.fillStyle = drag === i ? '#aaaaaa' : '#ffffff'; cx.fill();
+                cx.strokeStyle = '#000000'; cx.lineWidth = 2; cx.stroke();
                 if (drag === i) {
                     cx.fillStyle = '#fff'; cx.font = 'bold 10px system-ui,sans-serif';
                     cx.textAlign = 'center'; cx.textBaseline = 'bottom';
@@ -199,7 +202,7 @@
         const val = parseFloat(el.value) || 0;
         const max = parseFloat(el.max) || 100;
         const p = max > 0 ? (val / max) * 100 : 0;
-        el.style.background = `linear-gradient(to right, #ff0033 0%, #ff0033 ${p}%, #3a3a3a ${p}%, #3a3a3a 100%)`;
+        el.style.background = `linear-gradient(to right, #ffffff 0%, #ffffff ${p}%, #3a3a3a ${p}%, #3a3a3a 100%)`;
     }
 
     async function loadTranslations() {
@@ -253,6 +256,7 @@
         setRange(elements.autoGainBoost, LIMITS.autoGainBoost);
         setRange(elements.autoGainCut, LIMITS.autoGainCut);
         setRange(elements.autoGainResponse, LIMITS.autoGainResponse);
+        setRange(elements.perceptualAtten, LIMITS.perceptualBassAtten);
     }
 
     function renderPresets(activeId) {
@@ -319,6 +323,8 @@
             a.adaptive.headroomDb === b.adaptive.headroomDb &&
             a.adaptive.minRatio === b.adaptive.minRatio &&
             a.adaptive.maxRatio === b.adaptive.maxRatio &&
+            ((a.perceptual && a.perceptual.enabled) === (b.perceptual && b.perceptual.enabled)) &&
+            ((a.perceptual && a.perceptual.bassAttenDb) || 0) === ((b.perceptual && b.perceptual.bassAttenDb) || 0) &&
             ((a.eq && a.eq.id) || 'flat') === ((b.eq && b.eq.id) || 'flat')
         );
     }
@@ -377,6 +383,12 @@
         elements.autoGainResponse.value = state.autoGain.responseMs;
         elements.autoGainResponseOutput.textContent = `${Math.round(state.autoGain.responseMs)} ms`;
         elements.autoGainResponse.disabled = !state.autoGain.enabled;
+
+        const perceptual = state.perceptual || { enabled: true, bassAttenDb: 5 };
+        elements.perceptualEnabled.checked = perceptual.enabled !== false;
+        elements.perceptualAtten.value = perceptual.bassAttenDb;
+        elements.perceptualAttenOutput.textContent = `−${format(perceptual.bassAttenDb, 1)} dB`;
+        elements.perceptualAtten.disabled = perceptual.enabled === false;
 
         const adaptiveOn = !!(state.adaptive && state.adaptive.enabled);
         elements.adaptiveMeter.hidden = !adaptiveOn;
@@ -595,6 +607,18 @@
 
         elements.autoGainResponse.addEventListener('input', () => {
             state.autoGain.responseMs = Number(elements.autoGainResponse.value);
+            enqueuePersist();
+        });
+
+        elements.perceptualEnabled.addEventListener('change', () => {
+            if (!state.perceptual) state.perceptual = { enabled: true, bassAttenDb: 5 };
+            state.perceptual.enabled = elements.perceptualEnabled.checked;
+            enqueuePersist();
+        });
+
+        elements.perceptualAtten.addEventListener('input', () => {
+            if (!state.perceptual) state.perceptual = { enabled: true, bassAttenDb: 5 };
+            state.perceptual.bassAttenDb = Number(elements.perceptualAtten.value);
             enqueuePersist();
         });
 

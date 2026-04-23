@@ -4,6 +4,84 @@
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [EN]  v1.2.0  (2026-04-23)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  FEATURES & UI — New Additions
+  ─────────────────────────────
+  • Implemented Progressive Mode.
+    Intelligent scanning and locking of the ideal volume levels. Perfect for
+    scenarios where real-time adjustment isn't desired.
+
+  • Added EQ Graph System.
+    Visual representation and manual control of the 5-band equalizer for
+    surgical precision.
+
+  • Added Media Controls.
+    Native browser media keys support for play/pause, next, and previous track.
+
+  • Bass Perceptual Compensation.
+    Improved bass clarity at lower volumes using psychoacoustic modeling to
+    compensate for the Fletcher-Munson curve.
+
+  • New Visual Identity.
+    Complete logo overhaul and general theme shift from red to a premium
+    White/Silver "Moon" aesthetic.
+
+  • Landing Page Prototype.
+    Initial release of the professional, minimalist product landing page.
+
+  • Firefox Support (Work in Progress).
+    Underlying architecture adjustments to support Manifest v2/v3 compatibility
+    for the Firefox version.
+
+  BUG FIXES
+  ─────────
+  • Fixed Volume Jumping.
+    Refined EMA (loudness average) logic to eliminate sudden jumps between
+    tracks with different masters.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [PT]  v1.2.0  (2026-04-23)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  RECURSOS E UI — Novidades
+  ─────────────────────────
+  • Implementado Modo Progressivo.
+    Escaneamento inteligente e travamento do nível ideal de volume. Perfeito
+    para quando você não quer ajustes dinâmicos durante a música.
+
+  • Adicionado Sistema de EQ Graph.
+    Representação visual e controle manual do equalizador de 5 bandas para
+    precisão cirúrgica.
+
+  • Adicionado Controles de Mídia.
+    Suporte nativo às teclas de mídia do navegador para play/pause, próxima
+    e música anterior.
+
+  • Compensação Perceptual de Graves.
+    Melhoria na clareza dos graves em volumes baixos usando modelagem
+    psicoacústica para compensar a curva de Fletcher-Munson.
+
+  • Nova Identidade Visual.
+    Overhaul completo da logo e mudança do tema geral de vermelho para uma
+    estética premium Branco/Prata "Moon".
+
+  • Protótipo da Landing Page.
+    Lançamento inicial da landing page profissional e minimalista do produto.
+
+  • Suporte Firefox (Em progresso).
+    Ajustes de arquitetura para suportar compatibilidade Manifest v2/v3 para
+    a versão Firefox.
+
+  CORREÇÕES DE BUGS
+  ─────────────────
+  • Fim dos "Pulos" de Volume.
+    Lógica de EMA refinada para eliminar saltos bruscos entre músicas com
+    masterizações diferentes.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   [EN]  v1.1.0  (2026-04-22)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

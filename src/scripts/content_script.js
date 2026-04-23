@@ -298,6 +298,7 @@
         const MIN_H = 2;
 
         const tick = () => {
+            const now = performance.now();
             const viz = document.getElementById(VIZ_ID);
             if (!viz) {
                 vizState.running = false;
@@ -305,12 +306,14 @@
             }
 
             const bars = viz.children;
-            const bins = engine.isAttached() ? engine.getFrequencyBins(VIZ_BARS) : null;
+            const bins = engine.isAttached() ? engine.getFrequencyBins(32) : null;
 
             let anyActive = false;
             if (bins) {
+                // Update internal tiny visualizer (4 bars)
                 for (let i = 0; i < bars.length; i++) {
-                    const shaped = Math.pow(bins[i], 0.7);
+                    const dataIdx = Math.floor((i / bars.length) * (bins.length * 0.4));
+                    const shaped = Math.pow(bins[dataIdx], 0.7);
                     const target = MIN_H + shaped * (MAX_H - MIN_H);
                     const prev = vizState.heights[i];
                     const next = target > prev
@@ -320,6 +323,18 @@
                     bars[i].style.height = next.toFixed(1) + 'px';
                     if (next > MIN_H + 1) anyActive = true;
                 }
+
+                // Broadcast to background for landing page sync
+
+                if (anyActive || now - vizState.lastActive < 2000) {
+                    if (now % 1000 < 20) { // Log roughly every second
+                        // console.debug('[K-ROOM] Broadcasting frequency data...');
+                    }
+                    chrome.runtime.sendMessage({ 
+                        type: 'YTMS_FREQ_DATA', 
+                        data: Array.from(bins) 
+                    }).catch(() => {});
+                }
             } else {
                 for (let i = 0; i < bars.length; i++) {
                     vizState.heights[i] = MIN_H;
@@ -327,7 +342,6 @@
                 }
             }
 
-            const now = performance.now();
             if (anyActive) vizState.lastActive = now;
             const idle = now - vizState.lastActive > 400;
             viz.classList.toggle('is-idle', idle);
@@ -596,6 +610,8 @@
             log('Falha ao verificar versão', err);
         }
     }
+
+
 
     async function boot() {
         currentSettings = await loadSettings();

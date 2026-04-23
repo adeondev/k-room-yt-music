@@ -215,6 +215,27 @@
                     </div>
                     <input type="range" id="autogain-response" />
                 </div>
+
+                <hr class="divider" />
+
+                <div class="control control--inline">
+                    <label class="checkbox" for="perceptual-enabled">
+                        <input type="checkbox" id="perceptual-enabled" />
+                        <span data-i18n="lblPerceptualEnable">Compensação perceptual de graves (uniformiza loudness entre faixas)</span>
+                    </label>
+                </div>
+
+                <div class="control">
+                    <div class="control__row">
+                        <label for="perceptual-atten" data-i18n="lblPerceptualAtten">Intensidade da compensação (dB)</label>
+                        <output id="perceptual-atten-output"></output>
+                    </div>
+                    <input type="range" id="perceptual-atten" />
+                    <div class="control__scale">
+                        <span data-i18n="scalePerceptualOff">Neutro</span>
+                        <span data-i18n="scalePerceptualStrong">Forte</span>
+                    </div>
+                </div>
             </div>
         </section>
 
