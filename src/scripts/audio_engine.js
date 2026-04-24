@@ -5,7 +5,22 @@
     const SILENCE_GATE_DB = -55;
     const ANALYSER_FFT = 2048;
     const SCAN_PROVISIONAL_MS = 1500;
-    const SCAN_LOCK_MS = 8000;
+    const SCAN_LOCK_MS = 12000;
+    const SCAN_REFINE_UNTIL_MS = 30000;
+    const SCAN_BLOCK_MS = 400;
+    const ABSOLUTE_GATE_LUFS = -70;
+    const TRUE_PEAK_CEILING_DB = -1;
+    const PEAK_LIMITER_TRUST_DB = 8;
+    const K_SHELF_FREQ = 1681.97;
+    const K_SHELF_GAIN_DB = 3.999;
+    const RELATIVE_GATE_LU = -10;
+    const K_HPF_FREQ = 38.13;
+    const K_HPF_Q = 0.5;
+    const PERCEPTUAL_SHELF_FREQ = 250;
+    const PERCEPTUAL_SHELF_DEFAULT_DB = 5;
+    const PERCEPTUAL_PRESENCE_FREQ = 3150;
+    const PERCEPTUAL_PRESENCE_GAIN_DB = 1.0;
+    const PERCEPTUAL_PRESENCE_Q = 1.0;
 
     class AudioEngine {
         constructor() {
@@ -15,7 +30,8 @@
             this.settings = null;
             this.nodes = this._emptyNodes();
             this._attached = false;
-            this._analyserBuffer = null;
+            this._analyserKBuffer = null;
+            this._analyserPeakBuffer = null;
             this._emaMeanSquare = 0;
             this._peakEnvelope = 0;
             this._silenceTicks = 0;
@@ -27,8 +43,13 @@
             this._currentAdaptiveThresholdDb = 0;
             this._currentRoute = null;
             this._scanPhase = 'idle';
-            this._scanAccumulator = { sumSquares: 0, count: 0, elapsedMs: 0 };
+            this._scanBlocks = [];
+            this._currentScanBlock = { sumMs: 0, elapsedMs: 0 };
+            this._scanElapsedMs = 0;
             this._scanLockedGainDb = 0;
+            this._trackElapsedMs = 0;
+            this.debugLogs = [];
+            this.debugStartTime = Date.now();
         }
 
         isAttached() {
@@ -37,6 +58,10 @@
 
         isSameElement(el) {
             return this.mediaElement === el;
+        }
+
+        getMediaElement() {
+            return this.mediaElement;
         }
 
         ensureRunning() {
@@ -58,9 +83,8 @@
         }
 
         resetScan() {
+            this._resetScanState();
             this._scanPhase = 'scanning';
-            this._scanAccumulator = { sumSquares: 0, count: 0, elapsedMs: 0 };
-            this._scanLockedGainDb = 0;
             this._currentAutoGainDb = 0;
             this._emaMeanSquare = 0;
             this._peakEnvelope = 0;
@@ -68,6 +92,30 @@
             if (this.nodes.autoGain) {
                 this._smoothParam(this.nodes.autoGain.gain, 1.0, 0.15);
             }
+        }
+
+        resetForTrackChange() {
+            this._emaMeanSquare = 0;
+            this._peakEnvelope = 0;
+            this._silenceTicks = 0;
+            this._trackChangeBoost = true;
+            this._trackElapsedMs = 0;
+            if (this.settings && this.settings.autoGain && this.settings.autoGain.mode === 'scan') {
+                this._resetScanState();
+                this._scanPhase = 'scanning';
+                this._currentAutoGainDb = 0;
+                if (this.nodes.autoGain) {
+                    this._smoothParam(this.nodes.autoGain.gain, 1.0, 0.15);
+                }
+            }
+        }
+
+        _resetScanState() {
+            this._scanPhase = 'idle';
+            this._scanBlocks = [];
+            this._currentScanBlock = { sumMs: 0, elapsedMs: 0 };
+            this._scanElapsedMs = 0;
+            this._scanLockedGainDb = 0;
         }
 
         getScanPhase() {
@@ -145,6 +193,8 @@
             this.settings = settings;
             this._ensureResumed();
 
+            this._applyPerceptual(settings.perceptual);
+
             const targetRoute = settings.enabled === false ? 'bypass' : 'processing';
             if (this._currentRoute !== targetRoute) {
                 if (targetRoute === 'bypass') {
@@ -171,7 +221,7 @@
 
             const newMode = settings.autoGain ? (settings.autoGain.mode || 'realtime') : 'realtime';
             if (newMode !== 'scan' && this._scanPhase !== 'idle') {
-                this._scanPhase = 'idle';
+                this._resetScanState();
             }
         }
 
@@ -219,6 +269,13 @@
                 highpass: null,
                 eq: null,
                 analyser: null,
+                analyserK: null,
+                analyserPeak: null,
+                kFilterShelf: null,
+                kFilterHpf: null,
+                kFilterPerceptual: null,
+                kFilterPresence: null,
+                muteSink: null,
                 autoGain: null,
                 compressor: null,
                 makeup: null,
@@ -249,7 +306,40 @@
             this.nodes.analyser = ctx.createAnalyser();
             this.nodes.analyser.fftSize = ANALYSER_FFT;
             this.nodes.analyser.smoothingTimeConstant = 0;
-            this._analyserBuffer = new Float32Array(this.nodes.analyser.fftSize);
+
+            this.nodes.kFilterShelf = ctx.createBiquadFilter();
+            this.nodes.kFilterShelf.type = 'highshelf';
+            this.nodes.kFilterShelf.frequency.value = K_SHELF_FREQ;
+            this.nodes.kFilterShelf.gain.value = K_SHELF_GAIN_DB;
+
+            this.nodes.kFilterHpf = ctx.createBiquadFilter();
+            this.nodes.kFilterHpf.type = 'highpass';
+            this.nodes.kFilterHpf.frequency.value = K_HPF_FREQ;
+            this.nodes.kFilterHpf.Q.value = K_HPF_Q;
+
+            this.nodes.kFilterPerceptual = ctx.createBiquadFilter();
+            this.nodes.kFilterPerceptual.type = 'lowshelf';
+            this.nodes.kFilterPerceptual.frequency.value = PERCEPTUAL_SHELF_FREQ;
+            this.nodes.kFilterPerceptual.gain.value = -PERCEPTUAL_SHELF_DEFAULT_DB;
+
+            this.nodes.kFilterPresence = ctx.createBiquadFilter();
+            this.nodes.kFilterPresence.type = 'peaking';
+            this.nodes.kFilterPresence.frequency.value = PERCEPTUAL_PRESENCE_FREQ;
+            this.nodes.kFilterPresence.Q.value = PERCEPTUAL_PRESENCE_Q;
+            this.nodes.kFilterPresence.gain.value = PERCEPTUAL_PRESENCE_GAIN_DB;
+
+            this.nodes.analyserK = ctx.createAnalyser();
+            this.nodes.analyserK.fftSize = ANALYSER_FFT;
+            this.nodes.analyserK.smoothingTimeConstant = 0;
+            this._analyserKBuffer = new Float32Array(this.nodes.analyserK.fftSize);
+
+            this.nodes.analyserPeak = ctx.createAnalyser();
+            this.nodes.analyserPeak.fftSize = ANALYSER_FFT;
+            this.nodes.analyserPeak.smoothingTimeConstant = 0;
+            this._analyserPeakBuffer = new Float32Array(this.nodes.analyserPeak.fftSize);
+
+            this.nodes.muteSink = ctx.createGain();
+            this.nodes.muteSink.gain.value = 0;
 
             this.nodes.autoGain = ctx.createGain();
             this.nodes.autoGain.gain.value = 1.0;
@@ -262,6 +352,19 @@
             this.nodes.output.gain.value = 1.0;
 
             this.source.connect(this.nodes.input);
+            this.source.connect(this.nodes.kFilterShelf);
+            this.source.connect(this.nodes.analyserPeak);
+        }
+
+        _connectAnalysisTaps() {
+            const n = this.nodes;
+            n.kFilterShelf.connect(n.kFilterHpf);
+            n.kFilterHpf.connect(n.kFilterPerceptual);
+            n.kFilterPerceptual.connect(n.kFilterPresence);
+            n.kFilterPresence.connect(n.analyserK);
+            n.analyserK.connect(n.muteSink);
+            n.analyserPeak.connect(n.muteSink);
+            n.muteSink.connect(this.context.destination);
         }
 
         _routeProcessing() {
@@ -280,12 +383,14 @@
             n.makeup.connect(n.limiter);
             n.limiter.connect(n.output);
             n.output.connect(this.context.destination);
+            this._connectAnalysisTaps();
         }
 
         _routeBypass() {
             this._disconnectChain();
             this.nodes.input.connect(this.nodes.output);
             this.nodes.output.connect(this.context.destination);
+            this._connectAnalysisTaps();
         }
 
         _disconnectChain() {
@@ -350,11 +455,21 @@
             }
         }
 
+        _applyPerceptual(p) {
+            if (!this.nodes.kFilterPerceptual) return;
+            const enabled = !p || p.enabled !== false;
+            const rawDb = p && typeof p.bassAttenDb === 'number'
+                ? p.bassAttenDb
+                : PERCEPTUAL_SHELF_DEFAULT_DB;
+            const atten = enabled ? Math.max(0, Math.min(12, rawDb)) : 0;
+            this._smoothParam(this.nodes.kFilterPerceptual.gain, -atten, 0.05);
+        }
+
         _applyAutoGain(ag) {
             if (!ag || !ag.enabled) {
                 this._smoothParam(this.nodes.autoGain.gain, 1, 0.2);
                 this._currentAutoGainDb = 0;
-                this._scanPhase = 'idle';
+                this._resetScanState();
             }
         }
 
@@ -388,8 +503,17 @@
 
             const instDb = 10 * Math.log10(Math.max(sample.meanSquare, 1e-12));
 
+            const peakSquared = sample.peak * sample.peak;
+            if (peakSquared > this._peakEnvelope) {
+                this._peakEnvelope = peakSquared;
+            } else {
+                const decay = Math.exp(-AUTO_GAIN_TICK_MS / 2000);
+                this._peakEnvelope = this._peakEnvelope * decay;
+            }
+
             if (instDb < SILENCE_GATE_DB) {
                 this._silenceTicks = (this._silenceTicks || 0) + 1;
+                this._pushDebugLog(instDb);
                 return;
             }
 
@@ -400,22 +524,18 @@
                 } else {
                     this._emaMeanSquare = sample.meanSquare;
                 }
-                this._peakEnvelope = sample.peak * sample.peak;
                 this._trackChangeBoost = true;
             } else {
-                const alpha = AUTO_GAIN_TICK_MS / 2000;
+                this._trackElapsedMs += AUTO_GAIN_TICK_MS;
+                // Fast settling for the first 10s of each track (inter-song leveling),
+                // then very slow to preserve intra-song dynamics without pumping.
+                const alpha = this._trackElapsedMs < 10000
+                    ? AUTO_GAIN_TICK_MS / 2000
+                    : AUTO_GAIN_TICK_MS / 30000;
                 this._emaMeanSquare =
                     this._emaMeanSquare * (1 - alpha) + sample.meanSquare * alpha;
             }
             this._silenceTicks = 0;
-
-            const peakSquared = sample.peak * sample.peak;
-            if (peakSquared > this._peakEnvelope) {
-                this._peakEnvelope = peakSquared;
-            } else {
-                const decay = Math.exp(-AUTO_GAIN_TICK_MS / 1000);
-                this._peakEnvelope = this._peakEnvelope * decay;
-            }
 
             const rmsDb = 10 * Math.log10(Math.max(this._emaMeanSquare, 1e-12));
             const peakDb = 10 * Math.log10(Math.max(this._peakEnvelope, 1e-12));
@@ -423,12 +543,13 @@
 
             this._applyAutoGainUpdate(rmsDb);
             this._applyAdaptiveUpdate(rmsDb);
+            this._pushDebugLog(rmsDb);
         }
 
         _scanAutoGainTick() {
             const ag = this.settings.autoGain;
             if (!ag || !ag.enabled) {
-                this._scanPhase = 'idle';
+                this._resetScanState();
                 this._currentAutoGainDb = 0;
                 return;
             }
@@ -438,59 +559,134 @@
 
             const instDb = 10 * Math.log10(Math.max(sample.meanSquare, 1e-12));
 
-            if (instDb < SILENCE_GATE_DB) {
-                this._silenceTicks = (this._silenceTicks || 0) + 1;
-                return;
-            }
-            this._silenceTicks = 0;
-
             const peakSquared = sample.peak * sample.peak;
             if (peakSquared > this._peakEnvelope) {
                 this._peakEnvelope = peakSquared;
             } else {
-                const decay = Math.exp(-AUTO_GAIN_TICK_MS / 1000);
+                const decay = Math.exp(-AUTO_GAIN_TICK_MS / 2000);
                 this._peakEnvelope = this._peakEnvelope * decay;
             }
 
-            if (this._scanPhase === 'locked') {
-                const alpha = AUTO_GAIN_TICK_MS / 2000;
-                this._emaMeanSquare = this._emaMeanSquare * (1 - alpha) + sample.meanSquare * alpha;
-                const rmsDb = 10 * Math.log10(Math.max(this._emaMeanSquare, 1e-12));
-                const peakDb = 10 * Math.log10(Math.max(this._peakEnvelope, 1e-12));
-                this._currentCrestDb = Math.max(0, peakDb - rmsDb);
+            if (instDb < SILENCE_GATE_DB) {
+                this._silenceTicks = (this._silenceTicks || 0) + 1;
+                this._pushDebugLog(instDb);
                 return;
             }
+            this._silenceTicks = 0;
 
-            if (this._scanPhase !== 'scanning') {
+            this._currentScanBlock.sumMs += sample.meanSquare * AUTO_GAIN_TICK_MS;
+            this._currentScanBlock.elapsedMs += AUTO_GAIN_TICK_MS;
+            this._scanElapsedMs += AUTO_GAIN_TICK_MS;
+
+            if (this._currentScanBlock.elapsedMs >= SCAN_BLOCK_MS) {
+                const blockMs = this._currentScanBlock.sumMs / this._currentScanBlock.elapsedMs;
+                this._scanBlocks.push(blockMs);
+                this._currentScanBlock = { sumMs: 0, elapsedMs: 0 };
+            }
+
+            if (this._scanPhase !== 'scanning' && this._scanPhase !== 'locked') {
                 this._scanPhase = 'scanning';
             }
 
-            this._scanAccumulator.sumSquares += sample.meanSquare;
-            this._scanAccumulator.count++;
-            this._scanAccumulator.elapsedMs += AUTO_GAIN_TICK_MS;
+            const integratedMs = this._computeGatedLoudness(this._scanBlocks);
+            if (integratedMs === null) {
+                this._pushDebugLog(instDb);
+                return;
+            }
 
-            const avgMeanSquare = this._scanAccumulator.sumSquares / this._scanAccumulator.count;
-            const avgRmsDb = 10 * Math.log10(Math.max(avgMeanSquare, 1e-12));
-
-            this._emaMeanSquare = avgMeanSquare;
+            const integratedDb = 10 * Math.log10(Math.max(integratedMs, 1e-12));
+            this._emaMeanSquare = integratedMs;
             const peakDb = 10 * Math.log10(Math.max(this._peakEnvelope, 1e-12));
-            this._currentCrestDb = Math.max(0, peakDb - avgRmsDb);
+            this._currentCrestDb = Math.max(0, peakDb - integratedDb);
 
-            let gainDb = ag.targetDb - avgRmsDb;
+            const crestAdjust = Math.max(0, (this._currentCrestDb - 12) * 0.45);
+            let gainDb = (ag.targetDb - crestAdjust) - integratedDb;
             if (gainDb > ag.maxBoostDb) gainDb = ag.maxBoostDb;
             if (gainDb < -ag.maxCutDb) gainDb = -ag.maxCutDb;
 
-            if (this._scanAccumulator.elapsedMs >= SCAN_LOCK_MS) {
+            const headroom = TRUE_PEAK_CEILING_DB - peakDb + PEAK_LIMITER_TRUST_DB;
+            if (gainDb > headroom) gainDb = headroom;
+
+            if (this._scanPhase === 'locked') {
+                if (this._scanElapsedMs <= SCAN_REFINE_UNTIL_MS) {
+                    const blend = 0.05;
+                    const refined = this._scanLockedGainDb * (1 - blend) + gainDb * blend;
+                    this._scanLockedGainDb = refined;
+                    this._currentAutoGainDb = refined;
+                    const gain = Math.pow(10, refined / 20);
+                    this._smoothParam(this.nodes.autoGain.gain, gain, 1.5);
+                }
+            } else if (this._scanElapsedMs >= SCAN_LOCK_MS) {
                 this._currentAutoGainDb = gainDb;
                 this._scanLockedGainDb = gainDb;
                 const gain = Math.pow(10, gainDb / 20);
                 this._smoothParam(this.nodes.autoGain.gain, gain, 0.3);
                 this._scanPhase = 'locked';
-            } else if (this._scanAccumulator.elapsedMs >= SCAN_PROVISIONAL_MS) {
+            } else if (this._scanElapsedMs >= SCAN_PROVISIONAL_MS) {
                 this._currentAutoGainDb = gainDb;
                 const gain = Math.pow(10, gainDb / 20);
                 this._smoothParam(this.nodes.autoGain.gain, gain, 0.5);
             }
+
+            this._pushDebugLog(integratedDb);
+        }
+
+        _computeGatedLoudness(blocks) {
+            if (!blocks || blocks.length === 0) return null;
+
+            const absThresholdMs = Math.pow(10, ABSOLUTE_GATE_LUFS / 10);
+            const stage1 = blocks.filter(b => b >= absThresholdMs);
+            if (stage1.length === 0) {
+                const sum = blocks.reduce((a, b) => a + b, 0);
+                return sum / blocks.length;
+            }
+
+            const ungatedMean = stage1.reduce((a, b) => a + b, 0) / stage1.length;
+            const ungatedDb = 10 * Math.log10(Math.max(ungatedMean, 1e-12));
+
+            const relThresholdDb = ungatedDb + RELATIVE_GATE_LU;
+            const relThresholdMs = Math.pow(10, relThresholdDb / 10);
+            const stage2 = stage1.filter(b => b >= relThresholdMs);
+            if (stage2.length === 0) return ungatedMean;
+
+            return stage2.reduce((a, b) => a + b, 0) / stage2.length;
+        }
+
+        _pushDebugLog(rmsDb) {
+            if (!this.debugLogs) this.debugLogs = [];
+            const ag = this.settings ? this.settings.autoGain : null;
+            const compRed = this.nodes.compressor ? this.nodes.compressor.reduction : 0;
+            const limRed = this.nodes.limiter ? this.nodes.limiter.reduction : 0;
+            const outDb = rmsDb + this._currentAutoGainDb + compRed + limRed;
+            const fix = (v) => isFinite(v) ? Number(v.toFixed(2)) : v;
+            const peakDb = this._peakEnvelope > 0
+                ? 10 * Math.log10(this._peakEnvelope)
+                : -Infinity;
+
+            this.debugLogs.push({
+                timestamp: Date.now(),
+                elapsed: Date.now() - this.debugStartTime,
+                inputDb: fix(rmsDb),
+                targetDb: (ag && ag.enabled) ? ag.targetDb : null,
+                appliedGainDb: fix(this._currentAutoGainDb),
+                estimatedOutputDb: fix(outDb),
+                truePeakDb: isFinite(peakDb) ? fix(peakDb) : null,
+                crestDb: fix(this._currentCrestDb),
+                adaptiveRatio: fix(this._currentAdaptiveRatio),
+                adaptiveThresholdDb: fix(this._currentAdaptiveThresholdDb),
+                scanPhase: this._scanPhase,
+                scanBlocks: this._scanBlocks ? this._scanBlocks.length : 0,
+                silenceTicks: this._silenceTicks,
+                compressorReduction: fix(compRed),
+                limiterReduction: fix(limRed)
+            });
+            if (this.debugLogs.length > 720000) {
+                this.debugLogs.shift();
+            }
+        }
+
+        getDebugLogs() {
+            return this.debugLogs || [];
         }
 
         _applyAutoGainUpdate(rmsDb) {
@@ -504,6 +700,14 @@
             let gainDb = ag.targetDb - rmsDb;
             if (gainDb > ag.maxBoostDb) gainDb = ag.maxBoostDb;
             if (gainDb < -ag.maxCutDb) gainDb = -ag.maxCutDb;
+
+            const peakDb = this._peakEnvelope > 0
+                ? 10 * Math.log10(this._peakEnvelope)
+                : -Infinity;
+            if (isFinite(peakDb)) {
+                const headroom = TRUE_PEAK_CEILING_DB - peakDb + PEAK_LIMITER_TRUST_DB;
+                if (gainDb > headroom) gainDb = headroom;
+            }
 
             this._currentAutoGainDb = gainDb;
 
@@ -540,21 +744,29 @@
         }
 
         _sampleAudio() {
-            const analyser = this.nodes.analyser;
-            if (!analyser || !this._analyserBuffer) return null;
-            analyser.getFloatTimeDomainData(this._analyserBuffer);
+            const analyserK = this.nodes.analyserK;
+            const analyserPeak = this.nodes.analyserPeak;
+            if (!analyserK || !analyserPeak || !this._analyserKBuffer || !this._analyserPeakBuffer) return null;
 
-            let sumSquares = 0;
+            analyserK.getFloatTimeDomainData(this._analyserKBuffer);
+            analyserPeak.getFloatTimeDomainData(this._analyserPeakBuffer);
+
+            let sumSquaresK = 0;
+            const bufK = this._analyserKBuffer;
+            for (let i = 0; i < bufK.length; i++) {
+                sumSquaresK += bufK[i] * bufK[i];
+            }
+
             let peak = 0;
-            const buf = this._analyserBuffer;
-            for (let i = 0; i < buf.length; i++) {
-                const v = buf[i];
-                sumSquares += v * v;
+            const bufP = this._analyserPeakBuffer;
+            for (let i = 0; i < bufP.length; i++) {
+                const v = bufP[i];
                 const abs = v < 0 ? -v : v;
                 if (abs > peak) peak = abs;
             }
+
             return {
-                meanSquare: sumSquares / buf.length,
+                meanSquare: sumSquaresK / bufK.length,
                 peak: peak
             };
         }
@@ -596,7 +808,8 @@
             this.mediaElement = null;
             this.nodes = this._emptyNodes();
             this._attached = false;
-            this._analyserBuffer = null;
+            this._analyserKBuffer = null;
+            this._analyserPeakBuffer = null;
             this._emaMeanSquare = 0;
             this._peakEnvelope = 0;
             this._silenceTicks = 0;
@@ -606,9 +819,8 @@
             this._currentAdaptiveRatio = 0;
             this._currentAdaptiveThresholdDb = 0;
             this._currentRoute = null;
-            this._scanPhase = 'idle';
-            this._scanAccumulator = { sumSquares: 0, count: 0, elapsedMs: 0 };
-            this._scanLockedGainDb = 0;
+            this._trackElapsedMs = 0;
+            this._resetScanState();
         }
     }
 

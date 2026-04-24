@@ -11,16 +11,16 @@
             autoGain: {
                 enabled: true,
                 mode: 'scan',
-                targetDb: -24,
-                maxBoostDb: 3,
+                targetDb: -30,
+                maxBoostDb: 18,
                 maxCutDb: 6,
                 responseMs: 800
             },
             compressor: {
-                threshold: -6,
-                knee: 12,
-                ratio: 1.5,
-                attack: 0.02,
+                threshold: -8,
+                knee: 10,
+                ratio: 2.0,
+                attack: 0.01,
                 release: 0.3
             },
             makeupGain: 1.0,
@@ -30,9 +30,10 @@
                 knee: 0,
                 ratio: 20,
                 attack: 0.001,
-                release: 0.05
+                release: 0.08
             },
             adaptive: { enabled: false, headroomDb: 6, minRatio: 2, maxRatio: 6 },
+            perceptual: { enabled: true, bassAttenDb: 5 },
             eq: { id: 'flat' }
         },
         default: {
@@ -43,15 +44,15 @@
             highpass: { enabled: true, frequency: 30 },
             autoGain: {
                 enabled: true,
-                targetDb: -20,
-                maxBoostDb: 6,
+                targetDb: -26,
+                maxBoostDb: 22,
                 maxCutDb: 6,
                 responseMs: 800
             },
             compressor: {
-                threshold: -20,
+                threshold: -6,
                 knee: 6,
-                ratio: 2.5,
+                ratio: 1.5,
                 attack: 0.015,
                 release: 0.25
             },
@@ -62,9 +63,10 @@
                 knee: 0,
                 ratio: 20,
                 attack: 0.001,
-                release: 0.05
+                release: 0.1
             },
             adaptive: { enabled: false, headroomDb: 6, minRatio: 2, maxRatio: 6 },
+            perceptual: { enabled: true, bassAttenDb: 5 },
             eq: { id: 'flat' }
         },
         smart: {
@@ -75,7 +77,7 @@
             highpass: { enabled: true, frequency: 30 },
             autoGain: {
                 enabled: true,
-                targetDb: -19,
+                targetDb: -25,
                 maxBoostDb: 14,
                 maxCutDb: 12,
                 responseMs: 900
@@ -97,6 +99,7 @@
                 release: 0.05
             },
             adaptive: { enabled: true, headroomDb: 6, minRatio: 2.5, maxRatio: 5 },
+            perceptual: { enabled: true, bassAttenDb: 5 },
             eq: { id: 'flat' }
         },
         gentle: {
@@ -107,8 +110,8 @@
             highpass: { enabled: true, frequency: 25 },
             autoGain: {
                 enabled: true,
-                targetDb: -16,
-                maxBoostDb: 6,
+                targetDb: -22,
+                maxBoostDb: 14,
                 maxCutDb: 3,
                 responseMs: 800
             },
@@ -129,6 +132,7 @@
                 release: 0.05
             },
             adaptive: { enabled: false, headroomDb: 6, minRatio: 2, maxRatio: 6 },
+            perceptual: { enabled: true, bassAttenDb: 3 },
             eq: { id: 'flat' }
         },
         strong: {
@@ -139,8 +143,8 @@
             highpass: { enabled: true, frequency: 30 },
             autoGain: {
                 enabled: true,
-                targetDb: -19,
-                maxBoostDb: 10,
+                targetDb: -25,
+                maxBoostDb: 18,
                 maxCutDb: 9,
                 responseMs: 1200
             },
@@ -161,6 +165,7 @@
                 release: 0.05
             },
             adaptive: { enabled: false, headroomDb: 6, minRatio: 2, maxRatio: 6 },
+            perceptual: { enabled: true, bassAttenDb: 6 },
             eq: { id: 'flat' }
         },
         night: {
@@ -171,7 +176,7 @@
             highpass: { enabled: true, frequency: 40 },
             autoGain: {
                 enabled: true,
-                targetDb: -20,
+                targetDb: -26,
                 maxBoostDb: 18,
                 maxCutDb: 12,
                 responseMs: 500
@@ -193,6 +198,7 @@
                 release: 0.05
             },
             adaptive: { enabled: false, headroomDb: 6, minRatio: 2, maxRatio: 6 },
+            perceptual: { enabled: true, bassAttenDb: 8 },
             eq: { id: 'flat' }
         },
         off: {
@@ -225,6 +231,7 @@
                 release: 0.05
             },
             adaptive: { enabled: false, headroomDb: 6, minRatio: 2, maxRatio: 6 },
+            perceptual: { enabled: false, bassAttenDb: 0 },
             eq: { id: 'flat' }
         }
     });
@@ -241,10 +248,11 @@
         autoGainTarget: { min: -30, max: -6, step: 0.5 },
         autoGainBoost: { min: 0, max: 24, step: 0.5 },
         autoGainCut: { min: 0, max: 24, step: 0.5 },
-        autoGainResponse: { min: 100, max: 3000, step: 50 }
+        autoGainResponse: { min: 100, max: 3000, step: 50 },
+        perceptualBassAtten: { min: 0, max: 12, step: 0.5 }
     });
 
-    const STORAGE_KEY = 'ytms.settings.v4';
+    const STORAGE_KEY = 'ytms.settings.v5';
     const DEFAULT_PRESET_ID = 'progressive';
 
     const EQ_BANDS = Object.freeze([60, 250, 1000, 4000, 12000]);
@@ -314,6 +322,12 @@
         s.adaptive.headroomDb = clamp(s.adaptive.headroomDb, { min: 0, max: 18 });
         s.adaptive.minRatio = clamp(s.adaptive.minRatio, LIMITS.ratio);
         s.adaptive.maxRatio = clamp(s.adaptive.maxRatio, LIMITS.ratio);
+
+        if (!s.perceptual) {
+            s.perceptual = { enabled: true, bassAttenDb: 5 };
+        }
+        s.perceptual.enabled = Boolean(s.perceptual.enabled);
+        s.perceptual.bassAttenDb = clamp(s.perceptual.bassAttenDb, LIMITS.perceptualBassAtten);
 
         if (!s.eq) {
             s.eq = { id: DEFAULT_EQ_ID };

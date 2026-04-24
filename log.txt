@@ -4,6 +4,171 @@
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [EN]  v1.2.1  (2026-04-24)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  AUDIO ENGINE — Stability & Dynamics
+  ───────────────────────────────────
+  • Asymmetric EMA Logic.
+    Implemented separate attack (250ms) and release (5000ms) time constants
+    for loudness tracking. The engine now reacts instantly to loud drops
+    while preventing excessive volume boosts during quiet sections.
+
+  • Crest Factor Awareness.
+    Added dynamic target adjustment based on the song's dynamic range.
+    High-dynamic tracks now get more headroom automatically to prevent
+    clipping during peaks.
+
+  • Headroom & Safety.
+    Reduced Peak Limiter Trust (8dB → 3dB) and slowed down peak envelope
+    decay (2s) to ensure a more conservative and safer gain ceiling.
+
+  • Critical Logic Fix.
+    Removed a duplicate/broken scan implementation that was overriding the
+    stable logic and breaking Progressive Mode refinement.
+
+  • Preset Overhaul.
+    Raised compressor thresholds and lowered ratios across all presets to
+    prevent constant squashing and preserve the "punch" and energy of
+    the music.
+
+  TRACK DETECTION — Sync & Reliability
+  ────────────────────────────────────
+  • Immediate Detection.
+    Added mediaSession and loadedmetadata listeners. Song changes are now
+    detected instantly rather than waiting for URL polling.
+
+  • State Reset.
+    Implemented resetForTrackChange() to clear EMA and peak history when
+    a new song starts, preventing volume "bleeding" between tracks.
+
+  • Time Sync Fix.
+    Added readiness checks to prevent "merged time" or incorrect duration
+    displays during rapid track transitions.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [PT]  v1.2.1  (2026-04-24)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ENGINE DE ÁUDIO — Estabilidade e Dinâmica
+  ─────────────────────────────────────────
+  • Lógica de EMA Assimétrica.
+    Implementadas constantes de tempo separadas para ataque (250ms) e release
+    (5000ms). O engine agora reage instantaneamente a "drops" barulhentos,
+    evitando aumentos excessivos de volume em partes quietas.
+
+  • Ajuste por Crest Factor.
+    Adicionado ajuste dinâmico do alvo de loudness baseado na variação
+    dinâmica da música. Faixas muito dinâmicas agora recebem mais headroom
+    automaticamente para evitar distorção nos picos.
+
+  • Headroom e Segurança.
+    Reduzido o Peak Limiter Trust (8dB → 3dB) e suavizado o decaimento do
+    envelope de pico (2s) para garantir um teto de ganho mais seguro.
+
+  • Correção Crítica de Lógica.
+    Removida uma implementação duplicada e quebrada que estava sobrescrevendo
+    a lógica estável e quebrando o refinamento do Modo Progressivo.
+
+  • Refinamento de Presets.
+    Elevados os thresholds e reduzidos os ratios dos compressores em todos
+    os presets para evitar compressão constante e preservar o "punch".
+
+  DETECÇÃO DE FAIXAS — Sincronia e Confiabilidade
+  ───────────────────────────────────────────────
+  • Detecção Instantânea.
+    Adicionados listeners para mediaSession e loadedmetadata. Trocas de música
+    agora são detectadas na hora, sem depender apenas do polling de URL.
+
+  • Reset de Estado.
+    Implementado resetForTrackChange() para limpar o histórico de EMA e picos
+    ao iniciar uma nova música, evitando "vazamento" de volume entre faixas.
+
+  • Correção de Sincronia.
+    Adicionadas checagens de prontidão para evitar o erro de "tempo juntando"
+    ou durações incorretas durante transições rápidas.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [EN]  v1.2.0  (2026-04-24)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  FEATURES & UI — New Additions
+  ─────────────────────────────
+  • Implemented Progressive Mode.
+    Intelligent scanning and locking of the ideal volume levels. Perfect for
+    scenarios where real-time adjustment isn't desired.
+
+  • Added EQ Graph System.
+    Visual representation and manual control of the 5-band equalizer for
+    surgical precision.
+
+  • Added Media Controls.
+    Native browser media keys support for play/pause, next, and previous track.
+
+  • Bass Perceptual Compensation.
+    Improved bass clarity at lower volumes using psychoacoustic modeling to
+    compensate for the Fletcher-Munson curve.
+
+  • New Visual Identity.
+    Complete logo overhaul and general theme shift from red to a premium
+    White/Silver "Moon" aesthetic.
+
+  • Landing Page Prototype.
+    Initial release of the professional, minimalist product landing page.
+
+  • Firefox Support (Work in Progress).
+    Underlying architecture adjustments to support Manifest v2/v3 compatibility
+    for the Firefox version.
+
+  BUG FIXES
+  ─────────
+  • Fixed Volume Jumping.
+    Refined EMA (loudness average) logic to eliminate sudden jumps between
+    tracks with different masters.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [PT]  v1.2.0  (2026-04-24)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  RECURSOS E UI — Novidades
+  ─────────────────────────
+  • Implementado Modo Progressivo.
+    Escaneamento inteligente e travamento do nível ideal de volume. Perfeito
+    para quando você não quer ajustes dinâmicos durante a música.
+
+  • Adicionado Sistema de EQ Graph.
+    Representação visual e controle manual do equalizador de 5 bandas para
+    precisão cirúrgica.
+
+  • Adicionado Controles de Mídia.
+    Suporte nativo às teclas de mídia do navegador para play/pause, próxima
+    e música anterior.
+
+  • Compensação Perceptual de Graves.
+    Melhoria na clareza dos graves em volumes baixos usando modelagem
+    psicoacústica para compensar a curva de Fletcher-Munson.
+
+  • Nova Identidade Visual.
+    Overhaul completo da logo e mudança do tema geral de vermelho para uma
+    estética premium Branco/Prata "Moon".
+
+  • Protótipo da Landing Page.
+    Lançamento inicial da landing page profissional e minimalista do produto.
+
+  • Suporte Firefox (Em progresso).
+    Ajustes de arquitetura para suportar compatibilidade Manifest v2/v3 para
+    a versão Firefox.
+
+  CORREÇÕES DE BUGS
+  ─────────────────
+  • Fim dos "Pulos" de Volume.
+    Lógica de EMA refinada para eliminar saltos bruscos entre músicas com
+    masterizações diferentes.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   [EN]  v1.1.0  (2026-04-22)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

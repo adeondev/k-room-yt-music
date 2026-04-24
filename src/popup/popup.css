@@ -7,11 +7,11 @@
     --text: #ffffff;
     --text-muted: #aaaaaa;
     --text-dim: #717171;
-    --accent: #ff0033;
-    --accent-soft: rgba(255, 0, 51, 0.18);
-    --success: #ff0033;
+    --accent: #ffffff;
+    --accent-soft: rgba(255, 255, 255, 0.18);
+    --success: #ffffff;
     --warn: #ffb300;
-    --danger: #ff0033;
+    --danger: #ffffff;
     --radius: 12px;
     --radius-sm: 8px;
     --transition: 160ms cubic-bezier(0.2, 0, 0.2, 1);
@@ -123,7 +123,7 @@ html, body {
 
 .switch input:checked + .switch__slider::before {
     transform: translateX(18px);
-    background: #ffffff;
+    background: #000000;
 }
 
 
@@ -225,7 +225,21 @@ html, body {
 
 .eq-preset[aria-pressed="true"] {
     background: var(--accent);
-    color: #ffffff;
+    color: #000000;
+}
+
+.eq-graph-wrap {
+    margin-top: 10px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #141414;
+    border: 1px solid var(--border);
+}
+
+#eq-graph {
+    display: block;
+    width: 100%;
+    touch-action: none;
 }
 
 .eq-graph-wrap {
@@ -589,7 +603,7 @@ input[type="range"]:disabled {
     transition: transform 100ms, background 100ms;
 }
 .media-progress-slider:hover::-webkit-slider-thumb {
-    background: #ff0033;
+    background: #ffffff;
     transform: scale(1.2);
 }
 
