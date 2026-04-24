@@ -4,6 +4,52 @@
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [EN]  v1.2.2  (2026-04-24)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  FEATURES — New Additions
+  ────────────────────────
+  • Official Firefox Support.
+    Extension now ships as two separate builds: chrome/ and firefox/. The
+    Firefox manifest uses event-page background (background.scripts) and
+    declares browser_specific_settings.gecko for AMO compatibility.
+
+  PROJECT STRUCTURE
+  ─────────────────
+  • Split extension into per-browser folders.
+    Source and assets duplicated under chrome/ and firefox/ so each folder is
+    a self-contained, load-unpacked-ready build. Landing page assets remain
+    at the repository root.
+
+  LANDING PAGE
+  ────────────
+  • Added Visitors counter badge on the footer (via hits.sh).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [PT]  v1.2.2  (2026-04-24)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  RECURSOS — Novidades
+  ────────────────────
+  • Suporte Oficial ao Firefox.
+    A extensão agora é distribuída em dois builds separados: chrome/ e
+    firefox/. A manifest do Firefox usa event page (background.scripts) e
+    declara browser_specific_settings.gecko para compatibilidade com a AMO.
+
+  ESTRUTURA DO PROJETO
+  ────────────────────
+  • Separação da extensão em pastas por navegador.
+    Código-fonte e assets duplicados em chrome/ e firefox/ — cada pasta é um
+    build completo e autônomo, pronto pra "carregar sem compactação". Os
+    arquivos da landing page continuam na raiz do repositório.
+
+  LANDING PAGE
+  ────────────
+  • Adicionado contador de "Visitors" no footer (via hits.sh).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   [EN]  v1.2.1  (2026-04-24)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

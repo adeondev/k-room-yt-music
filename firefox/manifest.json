@@ -1,0 +1,100 @@
+{
+    "manifest_version": 3,
+    "name": "K-ROOM YT Music Control",
+    "version": "1.2.2",
+    "description": "Stabilize YouTube Music volume with a professional compressor and limiter. Zero distortion.",
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "k-room@adeondev.github.io",
+            "strict_min_version": "116.0"
+        }
+    },
+    "permissions": [
+        "storage",
+        "tabs"
+    ],
+    "host_permissions": [
+        "*://music.youtube.com/*",
+        "<all_urls>",
+        "file:///*"
+    ],
+    "commands": {
+        "play-pause": {
+            "suggested_key": {
+                "default": "MediaPlayPause"
+            },
+            "description": "Play / Pause"
+        },
+        "next": {
+            "suggested_key": {
+                "default": "MediaNextTrack"
+            },
+            "description": "Next Track"
+        },
+        "prev": {
+            "suggested_key": {
+                "default": "MediaPrevTrack"
+            },
+            "description": "Previous Track"
+        }
+    },
+    "icons": {
+        "16": "icons/icon.png",
+        "32": "icons/icon.png",
+        "48": "icons/icon.png",
+        "128": "icons/icon.png"
+    },
+    "background": {
+        "scripts": ["src/scripts/background.js"]
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "*://music.youtube.com/*"
+            ],
+            "js": [
+                "src/scripts/presets.js",
+                "src/scripts/audio_engine.js",
+                "src/scripts/content_script.js"
+            ],
+            "run_at": "document_idle",
+            "all_frames": false
+        },
+        {
+            "matches": [
+                "<all_urls>",
+                "file:///*"
+            ],
+            "js": [
+                "src/scripts/landing_bridge.js"
+            ],
+            "run_at": "document_idle",
+            "all_frames": false
+        }
+    ],
+    "action": {
+        "default_popup": "src/popup/popup.html",
+        "default_title": "K-ROOM YT Music Control",
+        "default_icon": {
+            "16": "icons/icon.png",
+            "32": "icons/icon.png",
+            "48": "icons/icon.png",
+            "128": "icons/icon.png"
+        }
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "src/popup/popup.html",
+                "src/popup/popup.css",
+                "src/popup/popup.js",
+                "src/scripts/presets.js",
+                "src/locales/locales.json",
+                "icons/icon.png"
+            ],
+            "matches": [
+                "*://music.youtube.com/*"
+            ]
+        }
+    ]
+}

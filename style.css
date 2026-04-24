@@ -795,6 +795,17 @@ body {
     margin-left: auto;
 }
 
+.footer-hits {
+    display: inline-flex;
+    align-items: center;
+    opacity: 0.75;
+    transition: opacity 0.15s;
+}
+
+.footer-hits:hover { opacity: 1; }
+
+.footer-hits img { display: block; height: 20px; }
+
 /* ─── RESPONSIVE ──────────────────────────────────── */
 
 /* Large desktop (1200-1440px) */

@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "K-ROOM YT Music Control",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "description": "Stabilize YouTube Music volume with a professional compressor and limiter. Zero distortion.",
     "permissions": [
         "storage",

@@ -18,14 +18,24 @@ It acts as a real-time audio compressor and limiter to balance volume between qu
 
 ## How to Install (Developer Mode)
 
-1. Clone or download this repository:
-   ```bash
-   git clone https://github.com/adeondev/k-room-yt-music.git
-   ```
-2. Open your Chromium-based browser and go to `chrome://extensions/`.
-3. Enable **"Developer mode"** in the top right corner.
-4. Click **"Load unpacked"** and select the extension folder.
-5. Open [YouTube Music](https://music.youtube.com/) and click the extension icon.
+Clone or download this repository first:
+```bash
+git clone https://github.com/adeondev/k-room-yt-music.git
+```
+
+### Chrome / Chromium / Edge / Brave
+1. Go to `chrome://extensions/`.
+2. Enable **"Developer mode"** in the top right corner.
+3. Click **"Load unpacked"** and select the [`chrome/`](chrome/) folder.
+4. Open [YouTube Music](https://music.youtube.com/) and click the extension icon.
+
+### Firefox
+1. Go to `about:debugging#/runtime/this-firefox`.
+2. Click **"Load Temporary Add-on..."**.
+3. Select the [`firefox/manifest.json`](firefox/manifest.json) file.
+4. Open [YouTube Music](https://music.youtube.com/) and click the extension icon.
+
+> Temporary add-ons are removed when Firefox restarts. For a persistent install, the extension needs to be signed via [AMO](https://addons.mozilla.org/).
 
 ## License
 
